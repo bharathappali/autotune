@@ -34,10 +34,10 @@ AUTOTUNE_CONFIGS="manifests/autotune-configs"
 AUTOTUNE_QUERY_VARIABLES="manifests/autotune-query-variables"
 
 AUTOTUNE_PORT="8080"
-AUTOTUNE_DOCKER_REPO="kruize/autotune"
+AUTOTUNE_DOCKER_REPO="bharathappali/exman"
 #Fetch autotune version from the pom.xml file.
 AUTOTUNE_VERSION="$(grep -A 1 "autotune" "${ROOT_DIR}"/pom.xml | grep version | awk -F '>' '{ split($2, a, "<"); print a[1] }')"
-AUTOTUNE_DOCKER_IMAGE=${AUTOTUNE_DOCKER_REPO}:${AUTOTUNE_VERSION}
+AUTOTUNE_DOCKER_IMAGE=${AUTOTUNE_DOCKER_REPO}:latest
 
 # source all the helpers scripts
 . ${SCRIPTS_DIR}/minikube-helpers.sh

@@ -42,7 +42,6 @@ RUN jlink --strip-debug --compress 2 --no-header-files --no-man-pages --module-p
 # Use ubi-minimal as the base image
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.3
 
-ARG AUTOTUNE_VERSION
 ARG NUM_TRIALS=5
 ARG NUM_JOBS=1
 
@@ -54,10 +53,8 @@ RUN microdnf install -y tzdata openssl curl ca-certificates fontconfig \
     && microdnf update -y \
     && microdnf clean all
 
-LABEL name="Kruize Autotune" \
-      vendor="Red Hat" \
-      version=${AUTOTUNE_VERSION} \
-      release=${AUTOTUNE_VERSION} \
+LABEL name="ExMan" \
+      vendor="ABSCORPUS Inc" \
       run="docker run --rm -it -p 8080:8080 <image_name:tag>" \
       summary="Docker Image for Autotune with ubi-minimal" \
       description="For more information on this image please see https://github.com/kruize/autotune/blob/master/README.md"
