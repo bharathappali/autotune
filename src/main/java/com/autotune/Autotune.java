@@ -17,6 +17,8 @@ package com.autotune;
 
 import com.autotune.analyzer.Analyzer;
 import com.autotune.analyzer.utils.ServerContext;
+import com.autotune.experimentManager.core.ExperimentManager;
+import com.autotune.experimentManager.utils.EMConstants;
 import com.autotune.service.HealthService;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -41,7 +43,8 @@ public class Autotune
 		server.setHandler(context);
 		addAutotuneServlets(context);
 
-		Analyzer.start(context);
+		//Analyzer.start(context);
+		ExperimentManager.launch(context);
 		try {
 			server.start();
 		} catch (Exception e) {
