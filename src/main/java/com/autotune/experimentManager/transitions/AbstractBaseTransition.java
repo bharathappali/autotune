@@ -16,12 +16,17 @@ public abstract class AbstractBaseTransition implements BaseTransition {
         EMUtil.EMExpStages nextStage = EMTransitionRegistry.getNextStage(trialData.getTargetStage());
         trialData.setCurrentStage(trialData.getTargetStage());
         trialData.setTargetStage(nextStage);
-        if (nextStage.isScheduled()) {
-
-        } else {
-            EMStageTransition transition = new EMStageTransition(runId, nextStage);
-            EMStageProcessQueue.getStageProcessQueueInstance().getQueue().add(transition);
-            ExperimentManager.notifyQueueProcessor();
-        }
+        // TODO: need to check if the stage is isScheduled and take a decision to push in appropriate queue
+        // Just pushing to regular queue for demo
+        /*
+        *  if (nextStage.isScheduled) {
+        *
+        * } else {
+        * */
+        System.out.println("Next Stage : " + nextStage.toString());
+        EMStageTransition transition = new EMStageTransition(runId, nextStage);
+        EMStageProcessQueue.getStageProcessQueueInstance().getQueue().add(transition);
+        ExperimentManager.notifyQueueProcessor();
+        // }
     }
 }

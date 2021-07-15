@@ -1,5 +1,7 @@
 package com.autotune.experimentManager.utils;
 
+import java.util.UUID;
+
 public class EMUtil {
     public enum EMExpStages {
         INIT(0, 1, false, null),
@@ -12,7 +14,8 @@ public class EMUtil {
         COLLECT_METRICS(4, 1, true, EMConstants.TransitionClasses.COLLECT_METRICS),
         CREATE_RESULT_DATA(5, 1, false, EMConstants.TransitionClasses.CREATE_RESULT_DATA),
         SEND_RESULT_DATA(5, 2, false, EMConstants.TransitionClasses.SEND_RESULT_DATA),
-        CLEAN_OR_ROLLBACK_DEPLOYMENT(6, 1, true, EMConstants.TransitionClasses.CLEAN_OR_ROLLBACK_DEPLOYMENT)
+        CLEAN_OR_ROLLBACK_DEPLOYMENT(6, 1, true, EMConstants.TransitionClasses.CLEAN_OR_ROLLBACK_DEPLOYMENT),
+        EXIT(7, 1, false, null)
         ;
 
         private int stage;
@@ -50,5 +53,24 @@ public class EMUtil {
             return values().length;
         }
 
+    }
+
+    public enum EMExpStatus {
+        CREATED,
+        WAIT,
+        IN_PROGRESS,
+        COMPLETED
+    }
+
+    public static String createUUID() {
+        return UUID.randomUUID().toString();
+    }
+
+    public static String formatNSDKey(String namespace, String deploymentName) {
+        return (new StringBuilder())
+                .append(namespace)
+                .append(":")
+                .append(deploymentName)
+                .toString();
     }
 }

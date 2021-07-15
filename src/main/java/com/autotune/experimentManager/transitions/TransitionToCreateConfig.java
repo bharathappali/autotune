@@ -10,10 +10,13 @@ import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 public class TransitionToCreateConfig extends AbstractBaseTransition {
+    private static final Logger LOGGER = LoggerFactory.getLogger(TransitionToCreateConfig.class);
 
     @Override
     public void transit(String runId) {

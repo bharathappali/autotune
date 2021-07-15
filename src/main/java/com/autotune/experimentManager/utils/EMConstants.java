@@ -6,6 +6,7 @@ public class EMConstants {
         public static final String ROOT = "/";
         public static final String CREATE_EXPERIMENT = ROOT + "createExperiment";
         public static final String GET_EXPERIMENTS = ROOT + "getExperiments";
+        public static final String GET_TRIAL_STATUS = ROOT + "getTrialStatus";
     }
 
     public static class DeploymentConstants {
@@ -23,5 +24,29 @@ public class EMConstants {
         public static final String CREATE_RESULT_DATA = "com.autotune.experimentManager.transitions.TransitionToCreateResultData";
         public static final String SEND_RESULT_DATA = "com.autotune.experimentManager.transitions.TransitionToSendResultData";
         public static final String CLEAN_OR_ROLLBACK_DEPLOYMENT = "com.autotune.experimentManager.transitions.TransitionToCleanDeployment";
+    }
+
+    public static class DeploymentStrategies {
+        public static String ROLLING_UPDATE = "rollingUpdate";
+        public static String NEW_DEPLOYMENT = "newDeployment";
+    }
+
+    public static class Logs {
+        public static class ExperimentManager {
+            public static String INITIALIZE_EM = "Initializing EM";
+            public static String ADD_EM_SERVLETS = "Adding EM Servlets";
+        }
+
+        public static class RunExperiment {
+            public static String START_TRANSITION_FOR_RUNID = "Starting transition {} for RUN ID - {}";
+            public static String END_TRANSITION_FOR_RUNID = "Ending transition {} for RUN ID - {}";
+            public static String RUNNING_TRANSITION_ON_THREAD_ID = "Running Transition on Thread ID - {}";
+        }
+    }
+
+    public static class InputJsonKeys {
+        public static class GetTrailStatusInputKeys {
+            public static String RUN_ID ="runId";
+        }
     }
 }

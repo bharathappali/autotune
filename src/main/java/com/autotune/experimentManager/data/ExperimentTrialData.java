@@ -1,6 +1,7 @@
 package com.autotune.experimentManager.data;
 
 import com.autotune.experimentManager.exceptions.EMInvalidInstanceCreation;
+import com.autotune.experimentManager.utils.EMUtil.EMExpStatus;
 import com.autotune.experimentManager.utils.EMUtil.EMExpStages;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 
@@ -14,6 +15,8 @@ public class ExperimentTrialData {
     private Deployment trailDeployment;
     private EMExpStages currentStage;
     private EMExpStages targetStage;
+    private EMExpStatus status;
+    private boolean notifyTrialCompletion;
 
     public ExperimentTrialData(EMTrialConfig config) throws EMInvalidInstanceCreation {
         if (config == null) {
@@ -22,6 +25,8 @@ public class ExperimentTrialData {
         this.config = config;
         currentStage = EMExpStages.INIT;
         targetStage = EMExpStages.CREATE_CONFIG;
+        this.status = EMExpStatus.CREATED;
+        this.notifyTrialCompletion = false;
     }
 
     public String getTrialResult() {
@@ -82,5 +87,21 @@ public class ExperimentTrialData {
 
     public void setTrailDeployment(Deployment trailDeployment) {
         this.trailDeployment = trailDeployment;
+    }
+
+    public EMExpStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(EMExpStatus status) {
+        this.status = status;
+    }
+
+    public boolean isNotifyTrialCompletion() {
+        return notifyTrialCompletion;
+    }
+
+    public void setNotifyTrialCompletion(boolean notifyTrialCompletion) {
+        this.notifyTrialCompletion = notifyTrialCompletion;
     }
 }

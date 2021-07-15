@@ -1,13 +1,19 @@
 package com.autotune.experimentManager.transitions;
 
-public class TransitionToSendResultData implements BaseTransition{
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class TransitionToSendResultData extends AbstractBaseTransition{
+    private static final Logger LOGGER = LoggerFactory.getLogger(TransitionToSendResultData.class);
     @Override
     public void transit(String runId) {
-
-    }
-
-    @Override
-    public void processNextTransition(String runId) {
-
+        LOGGER.info("Executing transition - TransitionToSendResultData on thread - {}", Thread.currentThread().getId());
+        System.out.println("Executing transition - TransitionToSendResultData on thread - {}" + Thread.currentThread().getId() + "For RunId - " + runId);
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        processNextTransition(runId);
     }
 }

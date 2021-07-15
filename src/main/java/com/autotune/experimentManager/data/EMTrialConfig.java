@@ -66,4 +66,14 @@ public class EMTrialConfig {
     public String getDeploymentStrategy() {
         return configSettings.getJSONObject("deployment_settings").getJSONObject("deployment_policy").getString("type");
     }
+
+    public String getDeploymentNamespace() {
+        for (Object deploymentConfig : configDeployments) {
+            JSONObject castedDeploymentConfig = (JSONObject) deploymentConfig;
+            if(castedDeploymentConfig.getString("type").equalsIgnoreCase("training")) {
+                return castedDeploymentConfig.getString("namespace");
+            }
+        }
+        return "default";
+    }
 }

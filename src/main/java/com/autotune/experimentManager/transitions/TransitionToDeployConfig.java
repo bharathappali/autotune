@@ -16,5 +16,6 @@ public class TransitionToDeployConfig extends AbstractBaseTransition{
         KubernetesClient client = new DefaultKubernetesClient();
         Deployment createdDeployment = client.apps().deployments().inNamespace(EMConstants.DeploymentConstants.NAMESPACE).createOrReplace(trialData.getTrailDeployment());
         trialData.setTrailDeployment(createdDeployment);
+        processNextTransition(runId);
     }
 }
