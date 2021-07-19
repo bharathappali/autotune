@@ -57,6 +57,7 @@ public class EMAPIHandler {
                 EMMapper.getInstance().getDeploymentRunIdMap().put(nsdKey, runIdList);
             }
             EMMapper.getInstance().getMap().put(runId, trialData);
+            trialData.setStatus(EMUtil.EMExpStatus.IN_PROGRESS);
             pushTransitionToQueue(runId);
         }
         return runId;
