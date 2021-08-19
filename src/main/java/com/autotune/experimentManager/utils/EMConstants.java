@@ -32,6 +32,9 @@ public class EMConstants {
     }
 
     public static class Logs {
+        public static class LoggerSettings {
+            public static String DEFUALT_LOG_LEVEL = "ALL";
+        }
         public static class ExperimentManager {
             public static String INITIALIZE_EM = "Initializing EM";
             public static String ADD_EM_SERVLETS = "Adding EM Servlets";
@@ -42,11 +45,37 @@ public class EMConstants {
             public static String END_TRANSITION_FOR_RUNID = "Ending transition {} for RUN ID - {}";
             public static String RUNNING_TRANSITION_ON_THREAD_ID = "Running Transition on Thread ID - {}";
         }
+
+        public static class EMExecutorService {
+            public static String CREATE_REGULAR_EXECUTOR = "Creating regular executor";
+            public static String CREATE_SCHEDULED_EXECUTOR = "Creating scheduled executor";
+            public static String START_EXECUTE_TRIAL = "Starting to execute a trial";
+            public static String START_SCHEDULED_EXECUTE_TRIAL = "Starting to execute a scheduled trial";
+            public static String START_STAGE_PROCESSORS = "Starting stage processors";
+        }
     }
 
     public static class InputJsonKeys {
         public static class GetTrailStatusInputKeys {
             public static String RUN_ID ="runId";
+        }
+
+        public static class DeploymentKeys {
+            public static String PARENT_DEPLOYMENT_NAME = "parent_deployment_name";
+            public static String TRAINING_DEPLOYMENT_NAME = "training_deployment_name";
+        }
+    }
+
+    public static class EMConfigDeployments {
+        public static class DeploymentTypes {
+            public static String TRAINING = "training";
+            public static String PRODUCTION = "production";
+        }
+    }
+
+    public static class EMConfigSettings {
+        public static class TrialSettings {
+
         }
     }
 }

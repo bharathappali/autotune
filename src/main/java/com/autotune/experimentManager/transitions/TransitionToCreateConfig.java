@@ -22,6 +22,7 @@ public class TransitionToCreateConfig extends AbstractBaseTransition {
     public void transit(String runId) {
         ExperimentTrialData trialData = (ExperimentTrialData) EMMapper.getInstance().getMap().get(runId);
         JSONArray configs = trialData.getConfig().getTrainingConfigs();
+        System.out.println(configs);
         KubernetesClient client = new DefaultKubernetesClient();
         RollingUpdateDeployment rud = new RollingUpdateDeployment();
         IntOrString maxSurge = new IntOrString(1);

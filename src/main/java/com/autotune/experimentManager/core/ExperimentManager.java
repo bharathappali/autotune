@@ -1,32 +1,37 @@
 package com.autotune.experimentManager.core;
 
 import com.autotune.experimentManager.services.GetTrialStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.autotune.experimentManager.services.CreateExperiment;
 import com.autotune.experimentManager.services.GetExperiments;
 import com.autotune.experimentManager.settings.EMS;
 import com.autotune.experimentManager.utils.EMConstants;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.config.Configurator;
+
 import org.eclipse.jetty.servlet.ServletContextHandler;
 
-public class ExperimentManager {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+public class ExperimentManager {
     public static EMExecutorService emExecutorService;
     public static EMStageProcessor emStageProcessor;
     public static EMScheduledStageProcessor emScheduledStageProcessor;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ExperimentManager.class);
 
-
     public static void initializeEM() {
-        LOGGER.info(EMConstants.Logs.ExperimentManager.INITIALIZE_EM);
         emExecutorService = EMExecutorService.getService();
         emStageProcessor = new EMStageProcessor();
         emScheduledStageProcessor = new EMScheduledStageProcessor();
+        LOGGER.info(EMConstants.Logs.ExperimentManager.INITIALIZE_EM);
     }
 
     public static void launch(ServletContextHandler contextHandler) {
+        Configurator.setAllLevels(LogManager.getRootLogger().getName(), Level.toLevel(EMConstants.Logs.LoggerSettings.DEFUALT_LOG_LEVEL));
         initializeEM();
         addEMServlets(contextHandler);
 
@@ -66,7 +71,6 @@ public class ExperimentManager {
 
     private static void addEMServlets(ServletContextHandler context) {
         LOGGER.info(EMConstants.Logs.ExperimentManager.ADD_EM_SERVLETS);
-        System.out.println(EMConstants.Logs.ExperimentManager.ADD_EM_SERVLETS);
         context.addServlet(CreateExperiment.class, EMConstants.APIPaths.CREATE_EXPERIMENT);
         context.addServlet(GetExperiments.class, EMConstants.APIPaths.GET_EXPERIMENTS);
         context.addServlet(GetTrialStatus.class, EMConstants.APIPaths.GET_TRIAL_STATUS);
