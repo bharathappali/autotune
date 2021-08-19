@@ -35,11 +35,18 @@ public class EMAPIHandler {
                     // TODO: Need to be handled
                 } else {
                     String existingRunId = depList.getLast();
-                    ((ExperimentTrialData) EMMapper.getInstance().getMap().get(existingRunId)).setNotifyTrialCompletion(true);
-                    trialData.setStatus(EMUtil.EMExpStatus.WAIT);
+                    ExperimentTrialData lastETD = ((ExperimentTrialData) EMMapper.getInstance().getMap().get(existingRunId));
+                    if (lastETD.getStatus() == EMUtil.EMExpStatus.COMPLETED) {
+                        depList.add(runId);
+                        EMMapper.getInstance().getMap().put(runId, trialData);
+                        pushTransitionToQueue(runId);
+                    } else {
+                        depList.add(runId);
+                        EMMapper.getInstance().getMap().put(runId, trialData);
+                        lastETD.setNotifyTrialCompletion(true);
+                        trialData.setStatus(EMUtil.EMExpStatus.WAIT);
+                    }
                 }
-                depList.add(runId);
-                EMMapper.getInstance().getMap().put(runId, trialData);
             } else {
                 LinkedList<String> runIdList = new LinkedList<String>();
                 runIdList.add(runId);
