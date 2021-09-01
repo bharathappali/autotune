@@ -36,7 +36,7 @@ public class EMAPIHandler {
                 } else {
                     String existingRunId = depList.getLast();
                     ExperimentTrialData lastETD = ((ExperimentTrialData) EMMapper.getInstance().getMap().get(existingRunId));
-                    if (lastETD.getStatus() == EMUtil.EMExpStatus.COMPLETED) {
+                    if (lastETD.getStatus().toString().equalsIgnoreCase(EMUtil.EMExpStatus.COMPLETED.toString())) {
                         depList.add(runId);
                         EMMapper.getInstance().getMap().put(runId, trialData);
                         pushTransitionToQueue(runId);
