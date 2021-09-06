@@ -13,6 +13,11 @@ public class EMConstants {
         public static String NAMESPACE = "default";
     }
 
+    public static class EMEnv {
+        public static final String AUTOTUNE_MODE = "AUTOTUNE_MODE";
+        public static final String EM_ONLY_MODE = "EM_ONLY";
+    }
+
     public static class TransitionClasses {
         public static final String CREATE_CONFIG = "com.autotune.experimentManager.transitions.TransitionToCreateConfig";
         public static final String DEPLOY_CONFIG = "com.autotune.experimentManager.transitions.TransitionToDeployConfig";
