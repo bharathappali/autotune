@@ -6,7 +6,7 @@ public class EMConstants {
         public static final String ROOT = "/";
         public static final String CREATE_EXPERIMENT = ROOT + "createExperiment";
         public static final String GET_EXPERIMENTS = ROOT + "getExperiments";
-        public static final String GET_TRIAL_STATUS = ROOT + "getTrialStatus";
+        public static final String LIST_TRIAL_STATUS = ROOT + "listTrialStatus";
     }
 
     public static class DeploymentConstants {
@@ -61,8 +61,10 @@ public class EMConstants {
     }
 
     public static class InputJsonKeys {
-        public static class GetTrailStatusInputKeys {
+        public static class ListTrialStatusKeys {
             public static String RUN_ID ="runId";
+            public static String STATUS = "status";
+            public static String ERROR = "error";
         }
 
         public static class DeploymentKeys {

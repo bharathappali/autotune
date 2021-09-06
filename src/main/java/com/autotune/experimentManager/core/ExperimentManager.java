@@ -1,6 +1,6 @@
 package com.autotune.experimentManager.core;
 
-import com.autotune.experimentManager.services.GetTrialStatus;
+import com.autotune.experimentManager.services.ListTrialStatus;
 
 import com.autotune.experimentManager.services.CreateExperiment;
 import com.autotune.experimentManager.services.GetExperiments;
@@ -74,6 +74,6 @@ public class ExperimentManager {
         LOGGER.info(EMConstants.Logs.ExperimentManager.ADD_EM_SERVLETS);
         context.addServlet(CreateExperiment.class, EMConstants.APIPaths.CREATE_EXPERIMENT);
         context.addServlet(GetExperiments.class, EMConstants.APIPaths.GET_EXPERIMENTS);
-        context.addServlet(GetTrialStatus.class, EMConstants.APIPaths.GET_TRIAL_STATUS);
+        context.addServlet(ListTrialStatus.class, EMConstants.APIPaths.LIST_TRIAL_STATUS);
     }
 }
