@@ -2,6 +2,8 @@ package com.autotune.experimentManager.data;
 
 import com.autotune.experimentManager.core.EMExecutorService;
 import com.autotune.experimentManager.data.input.EMConfigObject;
+import com.autotune.experimentManager.exceptions.EMDataObjectIsInEditingException;
+import com.autotune.experimentManager.exceptions.EMDataObjectIsNotFilledException;
 import com.autotune.experimentManager.exceptions.EMInvalidTimeDuarationException;
 import com.autotune.experimentManager.exceptions.IncompatibleInputJSONException;
 import com.autotune.experimentManager.utils.EMConstants;
@@ -20,6 +22,7 @@ public class EMTrialConfig {
     private int totalCycles;
     private boolean isWarmup;
     private int currentCycle;
+    private JSONObject inputJson;
 
     public int getCurrentCycle() {
         return currentCycle;
@@ -78,6 +81,7 @@ public class EMTrialConfig {
 
 
     public EMTrialConfig(JSONObject inputJSON) throws IncompatibleInputJSONException {
+        this.inputJson = inputJSON;
         this.emConfigObject = new EMConfigObject(inputJSON);
         if (emConfigObject.getSettings().getTrialSettings().getWarmupCycles() <= 0 && emConfigObject.getSettings().getTrialSettings().getMeasurementCycles() <= 0) {
             throw new IncompatibleInputJSONException();
@@ -102,5 +106,13 @@ public class EMTrialConfig {
 
     public String getDeploymentNamespace() {
         return "default";
+    }
+
+    public JSONObject getInputJSON() throws EMDataObjectIsInEditingException, EMDataObjectIsNotFilledException {
+        return emConfigObject.toJSON();
+    }
+
+    public JSONObject getRawInputJSON() {
+        return this.inputJson;
     }
 }

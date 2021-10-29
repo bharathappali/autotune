@@ -54,7 +54,7 @@ public class EMConfigObject implements ConvertToJSON {
         JSONObject deploymentsJsonObject = getDeployments().toJSON();
 
         jsonObject.put(EMConstants.EMJSONKeys.EXPERIMENT_ID, metadataJsonObject.getString(EMConstants.EMJSONKeys.EXPERIMENT_ID));
-        jsonObject.put(EMConstants.EMJSONKeys.APPLICATION_NAME, metadataJsonObject.getString(EMConstants.EMJSONKeys.APPLICATION_NAME));
+        jsonObject.put(EMConstants.EMJSONKeys.EXPERIMENT_NAME, metadataJsonObject.getString(EMConstants.EMJSONKeys.EXPERIMENT_NAME));
         jsonObject.put(EMConstants.EMJSONKeys.INFO, infoJsonObject);
         jsonObject.put(EMConstants.EMJSONKeys.SETTINGS,settingsJsonObject);
         jsonObject.put(EMConstants.EMJSONKeys.DEPLOYMENTS, deploymentsJsonObject);

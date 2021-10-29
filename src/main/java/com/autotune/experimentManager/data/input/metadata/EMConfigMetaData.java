@@ -37,11 +37,11 @@ public class EMConfigMetaData extends DataEditor<EMConfigMetaData> implements Co
             throw new IncompatibleInputJSONException();
         }
 
-        if (!jsonObject.has(EMConstants.EMJSONKeys.APPLICATION_NAME)) {
+        if (!jsonObject.has(EMConstants.EMJSONKeys.EXPERIMENT_NAME)) {
             throw new IncompatibleInputJSONException();
         }
 
-        setApplicationName(jsonObject.getString(EMConstants.EMJSONKeys.APPLICATION_NAME));
+        setApplicationName(jsonObject.getString(EMConstants.EMJSONKeys.EXPERIMENT_NAME));
         setExpId(jsonObject.getString(EMConstants.EMJSONKeys.EXPERIMENT_ID));
     }
 
@@ -62,7 +62,7 @@ public class EMConfigMetaData extends DataEditor<EMConfigMetaData> implements Co
         }
         JSONObject jsonObject = new JSONObject();
         jsonObject.put(EMConstants.EMJSONKeys.EXPERIMENT_ID, getExpId());
-        jsonObject.put(EMConstants.EMJSONKeys.APPLICATION_NAME, getApplicationName());
+        jsonObject.put(EMConstants.EMJSONKeys.EXPERIMENT_NAME, getApplicationName());
         return jsonObject;
     }
 }
