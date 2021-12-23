@@ -34,6 +34,7 @@ public class Autotune
 
 
 	public static void main(String[] args) {
+		System.out.println("Hello from integration");
 		ServletContextHandler context = null;
 
 		disableServerLogging();
