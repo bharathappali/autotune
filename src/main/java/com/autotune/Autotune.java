@@ -32,6 +32,7 @@ public class Autotune
 	private static final Logger LOGGER = LoggerFactory.getLogger(Autotune.class);
 
 	public static void main(String[] args) {
+		System.out.println("Hello Autotune");
 		ServletContextHandler context = null;
 
 		disableServerLogging();
