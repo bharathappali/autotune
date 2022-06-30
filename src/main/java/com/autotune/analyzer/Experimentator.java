@@ -66,9 +66,10 @@ public class Experimentator implements Runnable {
 			// Autotune can only handle MAX_NUMBER_OF_EXPERIMENTS at any given time
 			if (++num_experiments <= MAX_NUMBER_OF_EXPERIMENTS) {
 				RunExperiment runExperiment = new RunExperiment(autotuneExperiment);
+				autotuneExperiment.setExperimentThread(runExperiment);
 				Thread runExp = new Thread(runExperiment);
-				autotuneExperiment.setExperimentThread(runExp);
 				runExp.start();
+				runExp.join();
 			} else {
 				// TODO: Need to push the experiments to a queue
 				// Do nothing for now

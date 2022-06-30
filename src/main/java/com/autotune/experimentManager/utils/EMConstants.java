@@ -129,6 +129,7 @@ public class EMConstants {
 		public static String ITERATION_RESULT = "iteration_result";
 		public static String GENERAL_INFO = "general_info";
 		public static String SUMMARY = "summary";
+		public static String SUMMARY_RESULTS = "summary_results";
 		public static String RESULT_OUTCOME = "result_outcome";
 		public static String SUCCESS = "SUCCESS";
 		public static String FAILED = "FAILED";

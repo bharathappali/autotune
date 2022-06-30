@@ -20,13 +20,19 @@ import com.autotune.analyzer.application.ApplicationSearchSpace;
 import com.autotune.analyzer.application.ApplicationServiceStack;
 import com.autotune.analyzer.application.Tunable;
 import com.autotune.analyzer.deployment.AutotuneDeploymentInfo;
+import com.autotune.analyzer.exceptions.InvalidValueException;
 import com.autotune.common.data.experiments.*;
 import com.autotune.analyzer.k8sObjects.AutotuneObject;
 import com.autotune.analyzer.k8sObjects.Metric;
 import com.autotune.analyzer.k8sObjects.SloInfo;
 import com.autotune.analyzer.layer.Layer;
+import com.autotune.common.data.metrics.EMMetricResult;
+import com.autotune.experimentManager.exceptions.IncompatibleInputJSONException;
+import com.autotune.experimentManager.utils.EMConstants;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -36,10 +42,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import static com.autotune.analyzer.deployment.AutotuneDeployment.autotuneObjectMap;
+import static com.autotune.experimentManager.utils.EMConstants.EMConfigDeployments.DeploymentTypes.TRAINING;
 import static com.autotune.utils.AnalyzerConstants.ServiceConstants.EXPERIMENT_NAME;
+import static com.autotune.utils.AutotuneConstants.JSONKeys.*;
 import static com.autotune.utils.ServerContext.LIST_EXPERIMENTS_END_POINT;
 
 public class TrialHelpers {
+    private static final Logger LOGGER = LoggerFactory.getLogger(TrialHelpers.class);
     /**
      * Convert the given ExperimentTrial object to JSON. This will be sent to the EM module
      *
@@ -231,6 +240,63 @@ public class TrialHelpers {
 
         return experimentTrialJSON;
     }
+
+    /**
+     * Update the results obtained from EM to the corresponding AutotuneExperiment object for further processing
+     *
+     * @param trialNumber
+     * @param autotuneExperiment
+     * @param trialResultsJson
+     * @throws InvalidValueException
+     */
+    public static void updateExperimentTrial(int trialNumber,
+                                             AutotuneExperiment autotuneExperiment,
+                                             JSONObject trialResultsJson) throws InvalidValueException, IncompatibleInputJSONException {
+        String tracker = TRAINING;
+        ExperimentTrial experimentTrial = autotuneExperiment.getExperimentTrials().get(trialNumber);
+        if (null == experimentTrial) {
+            LOGGER.error("Invalid results JSON: Invalid trialNumber: " + trialNumber);
+            throw new InvalidValueException("Invalid results JSON: Invalid trialNumber: " + trialNumber);
+        }
+        TrialDetails trialDetails = null;
+        for (TrialDetails details : experimentTrial.getTrialDetails()) {
+            if (details.getDeploymentType().equalsIgnoreCase(tracker)){
+                trialDetails = details;
+            }
+        }
+        if (null == trialDetails) {
+            LOGGER.error("Invalid results JSON: Deployment tracker: " + tracker + " not found");
+            throw new InvalidValueException("Invalid results JSON: Deployment tracker: " + tracker + " not found");
+        }
+
+        JSONArray deploymentsArray = trialResultsJson.getJSONArray("deployments");
+        if (null == deploymentsArray) {
+            LOGGER.error("Invalid results JSON: Deployments Array not found");
+            throw new InvalidValueException("Invalid results JSON: Deployments Array not found");
+        }
+        JSONObject deployment = deploymentsArray.getJSONObject(0);
+        JSONArray podMetricsArray = deployment.getJSONArray(POD_METRICS);
+        if (null == podMetricsArray) {
+            LOGGER.error("Invalid results JSON: pod_metrics Array not found");
+            throw new InvalidValueException("Invalid results JSON: pod_metrics Array not found");
+        }
+        for (Object metricPodObject : podMetricsArray) {
+            JSONObject podMetric = (JSONObject) metricPodObject;
+            EMMetricResult emMetricResult = new EMMetricResult(podMetric.getJSONObject(EMConstants.EMJSONKeys.SUMMARY_RESULTS));
+            String metricName = podMetric.getString(NAME);
+            Metric metric = null;
+            for (Metric podMetricInList : trialDetails.getPodMetrics()) {
+                if (podMetricInList.getName().equalsIgnoreCase(metricName)) {
+                    metric = podMetricInList;
+                }
+            }
+            if (null != metric) {
+                metric.setEmMetricResult(emMetricResult);
+            }
+        }
+        LOGGER.info("Successfully updated results for trialNum: " + trialNumber);
+    }
+
 
     /**
      * Create a ExperimentTrial object that holds the trial config to be deployed to the k8s cluster

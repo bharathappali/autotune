@@ -39,6 +39,7 @@ public class CreateExperimentTrial extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String inputData = req.getReader().lines().collect(Collectors.joining());
         JSONObject json = new JSONObject(inputData);
+
         LOGGER.info("Input JSON obtained:");
         LOGGER.info(json.toString(4));
         LOGGER.info("Creating ETD");

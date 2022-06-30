@@ -23,6 +23,28 @@ public class RunExperiment implements Runnable
 		this.autotuneExperiment = autotuneExperiment;
 	}
 
+	/**
+	 *
+	 */
+	public synchronized void receive() {
+		while (true) {
+			try {
+				wait();
+				break;
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				LOGGER.info("Thread Interrupted");
+			}
+		}
+	}
+
+	/**
+	 *
+	 */
+	public synchronized void send() {
+		notify();
+	}
+
 	@Override
 	public void run() {
 

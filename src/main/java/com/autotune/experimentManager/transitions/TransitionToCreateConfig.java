@@ -101,6 +101,10 @@ public class TransitionToCreateConfig extends AbstractBaseTransition {
                         arg.setValue(value);
                         envList.add(arg);
                     }
+                    EnvVar arg = new EnvVar();
+                    arg.setName("JAVA_OPTIONS");
+                    arg.setValue(recommendedEnv.getString("JDK_JAVA_OPTIONS"));
+                    envList.add(arg);
                     deployedAppContainer.setEnv(envList);
                 }
             }

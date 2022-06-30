@@ -18,7 +18,7 @@ public class AutotuneExperiment {
     private final ApplicationDeployment applicationDeployment;
     private ApplicationSearchSpace applicationSearchSpace;
     ArrayList<ExperimentTrial> experimentTrials;
-    private Thread experimentThread;
+    private RunExperiment experimentThread;
 
     public AutotuneExperiment(String deploymentName,
                               String experimentName,
@@ -70,11 +70,11 @@ public class AutotuneExperiment {
         this.applicationSearchSpace = applicationSearchSpace;
     }
 
-    public Thread getExperimentThread() {
+    public RunExperiment getExperimentThread() {
         return experimentThread;
     }
 
-    public void setExperimentThread(Thread experimentThread) {
+    public void setExperimentThread(RunExperiment experimentThread) {
         this.experimentThread = experimentThread;
     }
 }

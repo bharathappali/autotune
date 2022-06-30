@@ -125,8 +125,10 @@ public class GenericRestApiClient {
                         + URLEncoder.encode(queryString, StandardCharsets.UTF_8)
                 );
             }
-            if (this.authHeaderString != null || !this.authHeaderString.isEmpty()) {
-                httpRequestBase.setHeader("Authorization", this.authHeaderString);
+            if (this.authHeaderString != null) {
+                if (!this.authHeaderString.isEmpty()) {
+                    httpRequestBase.setHeader("Authorization", this.authHeaderString);
+                }
             }
             LOGGER.debug("Executing request " + httpRequestBase.getRequestLine());
             jsonOutputInString = httpclient.execute(httpRequestBase, new StringResponseHandler());
