@@ -116,7 +116,7 @@ public class GenericRestApiClient {
      * @return Json object which contains API response.
      * @throws IOException
      */
-    private JSONObject fetchMetricsJson(String methodType, String queryString) throws IOException {
+    public JSONObject fetchMetricsJson(String methodType, String queryString) throws IOException {
         String jsonOutputInString = "";
         try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
             HttpRequestBase httpRequestBase = null;

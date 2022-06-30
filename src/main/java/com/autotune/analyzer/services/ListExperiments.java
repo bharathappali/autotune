@@ -35,6 +35,5 @@ public class ListExperiments extends HttpServlet
 		}
 		response.getWriter().println(experimentTrialJSONArray.toString(4));
 		response.getWriter().close();
-
 	}
 }

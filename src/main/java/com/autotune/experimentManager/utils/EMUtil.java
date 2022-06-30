@@ -16,12 +16,20 @@
 
 package com.autotune.experimentManager.utils;
 
+import com.autotune.experimentManager.core.EMIterationManager;
 import com.autotune.experimentManager.data.ExperimentTrialData;
 import com.autotune.experimentManager.data.input.EMMetricInput;
+import com.autotune.experimentManager.data.input.metrics.EMMetricResult;
+import com.autotune.experimentManager.data.iteration.EMIterationData;
+import com.autotune.experimentManager.data.iteration.EMIterationMetricResult;
 import org.json.JSONObject;
 
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class EMUtil {
     /**
@@ -50,7 +58,11 @@ public class EMUtil {
         /**
          * Initial stage
          */
-        INIT(0, 1, false, null),
+        INIT(0,
+                1,
+                false,
+                null,
+                false),
         /**
          * CREATE_CONFIG:
          *   Description: Stage in EM Trial Lifecycle where the configuration for a particular trial is being created
@@ -58,7 +70,11 @@ public class EMUtil {
          *   Successor Stage: DEPLOY_CONFIG
          *   Stage Type: Regular (Regular stages will be processed instantly by EM without any wait)
          */
-        CREATE_CONFIG(1, 1, false, EMConstants.TransitionClasses.CREATE_CONFIG),
+        CREATE_CONFIG(1,
+                1,
+                false,
+                EMConstants.TransitionClasses.CREATE_CONFIG,
+                false),
         /**
          * DEPLOY_CONFIG:
          *   Description: Stage in EM Trial Lifecycle where the created configuration for a trial is deployed in the node
@@ -66,32 +82,79 @@ public class EMUtil {
          *   Successor Stage: INITIATE_TRAIL_RUN_PHASE
          *   Stage Type: Regular (Regular stages will be processed instantly by EM without any wait)
          */
-        DEPLOY_CONFIG(2, 1, false, EMConstants.TransitionClasses.DEPLOY_CONFIG),
-        INITIATE_TRAIL_RUN_PHASE(3, 1, false, EMConstants.TransitionClasses.INITIATE_TRAIL_RUN_PHASE),
-        INITIAL_LOAD_CHECK(3, 2, true, EMConstants.TransitionClasses.INITIAL_LOAD_CHECK),
-        LOAD_CONSISTENCY_CHECK(3, 3, true, EMConstants.TransitionClasses.LOAD_CONSISTENCY_CHECK),
-        INITIATE_METRICS_COLLECTION_PHASE(4, 1, false, EMConstants.TransitionClasses.INITIATE_METRICS_COLLECTION_PHASE),
-        COLLECT_METRICS(4, 1, true, EMConstants.TransitionClasses.COLLECT_METRICS),
-        CREATE_RESULT_DATA(5, 1, false, EMConstants.TransitionClasses.CREATE_RESULT_DATA),
-        SEND_RESULT_DATA(5, 2, false, EMConstants.TransitionClasses.SEND_RESULT_DATA),
-        CLEAN_OR_ROLLBACK_DEPLOYMENT(6, 1, true, EMConstants.TransitionClasses.CLEAN_OR_ROLLBACK_DEPLOYMENT),
+        DEPLOY_CONFIG(2,
+                1,
+                false,
+                EMConstants.TransitionClasses.DEPLOY_CONFIG,
+                false),
+        INITIATE_TRIAL_RUN_PHASE(3,
+                1,
+                false,
+                EMConstants.TransitionClasses.INITIATE_TRIAL_RUN_PHASE,
+                false),
+        INITIAL_LOAD_CHECK(3,
+                2,
+                false,
+                EMConstants.TransitionClasses.INITIAL_LOAD_CHECK,
+                false),
+        LOAD_CONSISTENCY_CHECK(3,
+                3,
+                false,
+                EMConstants.TransitionClasses.LOAD_CONSISTENCY_CHECK,
+                false),
+        INITIATE_METRICS_COLLECTION_PHASE(4,
+                1,
+                false,
+                EMConstants.TransitionClasses.INITIATE_METRICS_COLLECTION_PHASE,
+                false),
+        COLLECT_METRICS(4,
+                2,
+                false,
+                EMConstants.TransitionClasses.COLLECT_METRICS,
+                false),
+        METRIC_COLLECTION_CYCLE(4,
+                3,
+                true,
+                EMConstants.TransitionClasses.METRIC_COLLECTION_CYCLE,
+                true),
+        CREATE_RESULT_DATA(5,
+                1,
+                false,
+                EMConstants.TransitionClasses.CREATE_RESULT_DATA,
+                false),
+        SEND_RESULT_DATA(5,
+                2,
+                false,
+                EMConstants.TransitionClasses.SEND_RESULT_DATA,
+                false),
+        CLEAN_OR_ROLLBACK_DEPLOYMENT(6,
+                1,
+                false,
+                EMConstants.TransitionClasses.CLEAN_OR_ROLLBACK_DEPLOYMENT,
+                false),
         /**
          * Final or exiting stage
          */
-        EXIT(7, 1, false, null)
+        EXIT(7,
+                1,
+                false,
+                null,
+                false)
         ;
 
         private int stage;
         private int intermediate_stage;
         private boolean isScheduled;
         private String className;
+        private boolean isCycle;
         private static final EMExpStages values[] = values();
 
-        private EMExpStages(final int stage, final int intermediate_stage, final boolean isScheduled, final String className) {
+        private EMExpStages(final int stage, final int intermediate_stage, final boolean isScheduled, final String className, final boolean isCycle) {
             this.stage = stage;
             this.intermediate_stage = intermediate_stage;
             this.isScheduled = isScheduled;
             this.className = className;
+            this.isCycle = isCycle;
         }
 
         /**
@@ -114,6 +177,8 @@ public class EMUtil {
         public boolean isScheduled() {
             return isScheduled;
         }
+
+        public boolean isCycle() { return isCycle; }
 
         /**
          * Returns the name of the class which is responsible for processing a particular stage
@@ -167,9 +232,224 @@ public class EMUtil {
                 .toString();
     }
 
-    public JSONObject generateMetricsMap(ExperimentTrialData etd) {
-        ArrayList<EMMetricInput> emMetricInputs = etd.getConfig().getEmConfigObject().getDeployments().getTrainingDeployment().getMetrics();
+    public static JSONObject generateMetricsMap(ExperimentTrialData etd) {
+        ArrayList<EMMetricInput> emMetricInputs = etd.getConfig().getEmConfigObject().getDeployments().getTrainingDeployment().getPodMetrics();
 
         return null;
+    }
+
+    public static boolean breakingCondition(EMExpStages stage, ExperimentTrialData etd) {
+        // Need to implement breaking condition for each cycling stage
+        boolean result = false;
+        if (stage == EMExpStages.METRIC_COLLECTION_CYCLE) {
+            result = ((etd.getConfig().getEmConfigObject().getSettings().getTrialSettings().getWarmupCycles()
+                    + etd.getConfig().getEmConfigObject().getSettings().getTrialSettings().getMeasurementCycles())
+                    <
+                    etd.getEmIterationManager().getIterationDataList().get(etd.getEmIterationManager().getCurrentIteration() - 1).getCurrentCycle());
+            System.out.println(result);
+        }
+        return result;
+    }
+
+
+
+    public static int getDelayTimerForStage (EMExpStages stage, ExperimentTrialData etd) {
+        int delayTimer = 0;
+        if (!stage.isScheduled()) {
+            return delayTimer;
+        }
+        if (stage == EMExpStages.METRIC_COLLECTION_CYCLE) {
+            // return cycle duration in seconds
+            int current_cycle = etd.getEmIterationManager().getIterationDataList().get(etd.getEmIterationManager().getCurrentIteration()-1).getCurrentCycle();
+            int warmup_cycles = etd.getConfig().getEmConfigObject().getSettings().getTrialSettings().getWarmupCycles();
+            String warmup_duration = etd.getConfig().getEmConfigObject().getSettings().getTrialSettings().getWarmupDuration();
+            String measurement_duration = etd.getConfig().getEmConfigObject().getSettings().getTrialSettings().getMeasurementDuration();
+            if (current_cycle <= warmup_cycles) {
+                delayTimer = getTimeValue(warmup_duration) * getTimeUnitInSeconds(getTimeUnit(warmup_duration));
+                System.out.println("delayTimer - " + delayTimer + " seconds");
+            } else {
+                delayTimer = getTimeValue(measurement_duration) * getTimeUnitInSeconds(getTimeUnit(measurement_duration));
+                System.out.println("delayTimer - " + delayTimer + " seconds");
+            }
+//            return 10;
+        }
+        System.out.println("delayTimer - " + delayTimer + " seconds");
+        return delayTimer;
+    }
+
+    public static String getBaseDataSourceUrl(String url, String datasource) {
+        if (datasource.equalsIgnoreCase(EMConstants.DataSources.PROMETHEUS)) {
+            return (new StringBuilder())
+                    .append(url)
+                    .append("/api/v1/query?query=")
+                    .toString();
+        }
+        return null;
+    }
+
+    public static String formatQueryForURL(String query) {
+        if (null != query) {
+            return (new StringBuilder())
+                    .append("?query=")
+                    .append(query)
+                    .toString();
+        }
+        return null;
+    }
+
+    public static int getTimeValue(String timestr) {
+        String workingstr = timestr.replace(EMConstants.Patterns.WHITESPACE_PATTERN, "");
+        Pattern pattern = Pattern.compile(EMConstants.Patterns.DURATION_PATTERN);
+        Matcher matcher = pattern.matcher(workingstr);
+        if (matcher.find()) {
+            if (null != matcher.group(1)) {
+                System.out.println("match found, integer - " + Integer.parseInt(matcher.group(1)));
+                return Integer.parseInt(matcher.group(1));
+            }
+        }
+        return Integer.MIN_VALUE;
+    }
+
+    public static TimeUnit getTimeUnit(String timestr) {
+        String workingstr = timestr.replace(EMConstants.Patterns.WHITESPACE_PATTERN, "");
+        Pattern pattern = Pattern.compile(EMConstants.Patterns.DURATION_PATTERN);
+        Matcher matcher = pattern.matcher(workingstr);
+        if (matcher.find()) {
+            if (null != matcher.group(2).trim()) {
+                String trimmedDurationUnit = matcher.group(2).trim();
+                System.out.println(trimmedDurationUnit);
+                if (trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.SECOND_SINGLE_LC)
+                    || trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.SECOND_SHORT_LC_SINGULAR)
+                    || trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.SECOND_SHORT_LC_PLURAL)
+                    || trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.SECOND_LC_SINGULAR)
+                    || trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.SECOND_LC_PLURAL)) {
+                    System.out.println("match found getTimeUnit seconds");
+                    return TimeUnit.SECONDS;
+                }
+                if (trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.MINUTE_SINGLE_LC)
+                        || trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.MINUTE_SHORT_LC_SINGULAR)
+                        || trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.MINUTE_SHORT_LC_PLURAL)
+                        || trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.MINUTE_LC_SINGULAR)
+                        || trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.MINUTE_LC_PLURAL)) {
+                    System.out.println("match found getTimeUnit minutes");
+                    return TimeUnit.MINUTES;
+                }
+                if (trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.HOUR_SINGLE_LC)
+                        || trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.HOUR_SHORT_LC_SINGULAR)
+                        || trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.HOUR_SHORT_LC_PLURAL)
+                        || trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.HOUR_LC_SINGULAR)
+                        || trimmedDurationUnit.equalsIgnoreCase(EMConstants.TimeUnitsExt.HOUR_LC_PLURAL)) {
+                    System.out.println("match found getTimeUnit hours");
+                    return TimeUnit.HOURS;
+                }
+            }
+        }
+        return TimeUnit.MINUTES;
+    }
+
+    public static int getTimeUnitInSeconds(TimeUnit unit) {
+        System.out.println("In getTimeUnitInSeconds");
+        System.out.println(unit);
+        if (unit.equals(TimeUnit.SECONDS)) {
+            return 1;
+        } else if (unit.equals(TimeUnit.MINUTES)) {
+            System.out.println("In minutes");
+            return EMConstants.TimeConv.NO_OF_SECONDS_PER_MINUTE;
+        } else if (unit.equals(TimeUnit.HOURS)) {
+            return EMConstants.TimeConv.NO_OF_MINUTES_PER_HOUR * EMConstants.TimeConv.NO_OF_SECONDS_PER_MINUTE;
+        } else {
+            return Integer.MIN_VALUE;
+        }
+    }
+
+    public static void  printMetricMap(ExperimentTrialData etd) {
+        EMIterationManager emIterationManager = etd.getEmIterationManager();
+        ArrayList<EMIterationData> emIterationDataList = emIterationManager.getIterationDataList();
+        for (EMIterationData emIterationData : emIterationDataList) {
+            System.out.println("Iteration - " + emIterationData.getIterationIndex());
+            ArrayList<EMMetricInput> emMetricInputArrayList = etd.getConfig().getEmConfigObject().getDeployments().getTrainingDeployment().getAllMetrics();
+            for (EMMetricInput emMetricInput : emMetricInputArrayList) {
+                System.out.println("Metric - " + emMetricInput.getName());
+                EMIterationMetricResult emIterationMetricResult = emIterationData.getEmIterationResult().getIterationMetricResult(emMetricInput.getName());
+                for (EMMetricResult warmupResult : emIterationMetricResult.getWarmUpResults()) {
+                    System.out.println(warmupResult.toJSON().toString(2));
+                }
+                for (EMMetricResult measurementResults : emIterationMetricResult.getMeasurementResults()) {
+                    System.out.println(measurementResults.toJSON().toString(2));
+                }
+            }
+        }
+    }
+
+    public enum QueryType {
+        SYSTEM,
+        CONTAINER,
+        RUNTIME,
+        MIDDLEWARE,
+        APPLICATION
+    }
+
+    public enum MetricResultType {
+        MEAN,
+        MIN,
+        MAX
+    }
+
+    public static QueryType detectQueryType(String query) {
+        if (query.toLowerCase().contains("jvm")) {
+            System.out.println("Runtime query");
+            return QueryType.RUNTIME;
+        }
+        return QueryType.CONTAINER;
+    }
+
+    public static boolean needsAggregatedResult(String query) {
+        if (query.toLowerCase().contains("jvm")) {
+            System.out.println("Needs aggregated results");
+            return true;
+        }
+        return false;
+    }
+
+    public static String buildQueryForType(String baseQuery, MetricResultType metricResultType) {
+        String returnQuery = baseQuery;
+        if (metricResultType == MetricResultType.MEAN) {
+            if (baseQuery.contains("rate")) {
+                returnQuery = baseQuery;
+            } else if (baseQuery.contains("container_cpu_usage_seconds_total")) {
+                baseQuery = baseQuery.replaceAll("\\(|\\)", "");
+                System.out.println("base Query - " + baseQuery);
+                returnQuery = "rate(" + baseQuery + ")";
+            }else {
+                baseQuery = baseQuery.replaceAll("\\(|\\)", "");
+                System.out.println("base Query - " + baseQuery);
+                returnQuery = "sum(" + baseQuery + ")";
+            }
+        } else if (metricResultType == MetricResultType.MAX) {
+            if (baseQuery.contains("http_server_requests_seconds")) {
+                returnQuery = baseQuery.replace("rate", "max_over_time");
+            } else if (baseQuery.contains("container_cpu_usage_seconds_total")) {
+                baseQuery = baseQuery.replaceAll("\\(|\\)", "");
+                System.out.println("base Query - " + baseQuery);
+                returnQuery = "max_over_time(" + baseQuery + ")";
+            } else {
+                baseQuery = baseQuery.replaceAll("\\(|\\)", "");
+                System.out.println("base Query - " + baseQuery);
+                returnQuery = "max(" + baseQuery + ")";
+            }
+        } else if (metricResultType == MetricResultType.MIN) {
+            if (baseQuery.contains("http_server_requests_seconds")) {
+                returnQuery = baseQuery.replace("rate", "min_over_time");
+            }  else if (baseQuery.contains("container_cpu_usage_seconds_total")) {
+                baseQuery = baseQuery.replaceAll("\\(|\\)", "");
+                System.out.println("base Query - " + baseQuery);
+                returnQuery = "min_over_time(" + baseQuery + ")";
+            } else {
+                baseQuery = baseQuery.replaceAll("\\(|\\)", "");
+                System.out.println("base Query - " + baseQuery);
+                returnQuery = "min(" + baseQuery + ")";
+            }
+        }
+        return returnQuery;
     }
 }

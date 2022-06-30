@@ -19,11 +19,12 @@ public class EMConstants {
 		private TransitionClasses() { }
 		public static final String CREATE_CONFIG = "com.autotune.experimentManager.transitions.TransitionToCreateConfig";
 		public static final String DEPLOY_CONFIG = "com.autotune.experimentManager.transitions.TransitionToDeployConfig";
-		public static final String INITIATE_TRAIL_RUN_PHASE = "com.autotune.experimentManager.transitions.TransitionToInitiateTrialRunPhase";
+		public static final String INITIATE_TRIAL_RUN_PHASE = "com.autotune.experimentManager.transitions.TransitionToInitiateTrialRunPhase";
 		public static final String INITIAL_LOAD_CHECK = "com.autotune.experimentManager.transitions.TransitionToInitialLoadCheck";
 		public static final String LOAD_CONSISTENCY_CHECK = "com.autotune.experimentManager.transitions.TransitionToLoadConsistencyCheck";
 		public static final String INITIATE_METRICS_COLLECTION_PHASE = "com.autotune.experimentManager.transitions.TransitionToInitiateMetricsCollectionPhase";
 		public static final String COLLECT_METRICS = "com.autotune.experimentManager.transitions.TransitionToCollectMetrics";
+		public static final String METRIC_COLLECTION_CYCLE = "com.autotune.experimentManager.transitions.TransitionToMetricCollectionCycle";
 		public static final String CREATE_RESULT_DATA = "com.autotune.experimentManager.transitions.TransitionToCreateResultData";
 		public static final String SEND_RESULT_DATA = "com.autotune.experimentManager.transitions.TransitionToSendResultData";
 		public static final String CLEAN_OR_ROLLBACK_DEPLOYMENT = "com.autotune.experimentManager.transitions.TransitionToCleanDeployment";
@@ -59,6 +60,20 @@ public class EMConstants {
 			public static String START_EXECUTE_TRIAL = "Starting to execute a trial";
 			public static String START_SCHEDULED_EXECUTE_TRIAL = "Starting to execute a scheduled trial";
 			public static String START_STAGE_PROCESSORS = "Starting stage processors";
+		}
+	}
+
+	public static class DataSources {
+		private DataSources() { }
+
+		public static String PROMETHEUS = "prometheus";
+	}
+
+	public static class HttpConstants {
+		private HttpConstants() { }
+		public static class MethodType {
+			private MethodType() { }
+			public static String GET = "GET";
 		}
 	}
 
@@ -113,7 +128,13 @@ public class EMConstants {
 		public static String MEASUREMENT_RESULTS = "measurement_results";
 		public static String ITERATION_RESULT = "iteration_result";
 		public static String GENERAL_INFO = "general_info";
+		public static String SUMMARY = "summary";
+		public static String RESULT_OUTCOME = "result_outcome";
+		public static String SUCCESS = "SUCCESS";
+		public static String FAILED = "FAILED";
 		public static String RESULTS = "results";
+		public static String RESULT = "result";
+		public static String RESULT_ERROR = "result_error";
 		public static String SCORE = "score";
 		public static String ERROR = "error";
 		public static String MEAN = "mean";
@@ -131,6 +152,8 @@ public class EMConstants {
 		public static String CYCLES = "cycles";
 		public static String DURATION = "duration";
 		public static String PERCENTILE_INFO = "percentile_info";
+		public static String MIN = "min";
+		public static String MAX = "max";
 	}
 
 	public static class InputJsonKeys {
@@ -248,5 +271,11 @@ public class EMConstants {
 		public static String MEM_QUERY_NAME = "memRequest";
 		public static String THROUGHPUT = "throughput";
 		public static String RESPONSE_TIME = "response_time";
+	}
+
+	public static class Patterns {
+		private Patterns() { }
+		public static String DURATION_PATTERN = "(\\d+)([a-zA-Z]+)";
+		public static String WHITESPACE_PATTERN = "\\s";
 	}
 }
