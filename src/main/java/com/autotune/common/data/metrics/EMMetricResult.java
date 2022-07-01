@@ -24,15 +24,17 @@ public class EMMetricResult implements ConvertToJSON {
     }
 
     public EMMetricResult(JSONObject jsonObject) throws IncompatibleInputJSONException {
-        if (!jsonObject.has(AutotuneConstants.JSONKeys.GENERAL_INFO) ||
-            !jsonObject.has(AutotuneConstants.JSONKeys.PERCENTILE_INFO)) {
-            throw new IncompatibleInputJSONException();
+        if (!jsonObject.has(AutotuneConstants.JSONKeys.PERCENTILE_INFO)) {
+            if (!jsonObject.has(AutotuneConstants.JSONKeys.GENERAL_INFO)) {
+                throw new IncompatibleInputJSONException();
+            }
         }
         if (jsonObject.has(AutotuneConstants.JSONKeys.PERCENTILE_INFO)) {
             isPercentileResultsAvailable = true;
         }
         emMetricGenericResults = new EMMetricGenericResults(jsonObject.getJSONObject(AutotuneConstants.JSONKeys.GENERAL_INFO));
-        emMetricPercentileResults = new EMMetricPercentileResults(jsonObject.getJSONObject(AutotuneConstants.JSONKeys.PERCENTILE_INFO));
+        if (isPercentileResultsAvailable)
+            emMetricPercentileResults = new EMMetricPercentileResults(jsonObject.getJSONObject(AutotuneConstants.JSONKeys.PERCENTILE_INFO));
     }
 
 
