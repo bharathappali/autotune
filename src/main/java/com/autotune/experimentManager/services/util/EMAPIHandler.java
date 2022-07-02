@@ -104,7 +104,7 @@ public class EMAPIHandler {
         infoObject.put(EMConstants.EMJSONKeys.TRIAL_INFO, trailInfoObject);
         JSONObject dsInfoObject = new JSONObject();
         JSONArray dsArray = new JSONArray();
-        dsInfoObject.put(EMConstants.EMJSONKeys.URL, experimentTrial.getDatasourceInfo().getUrl());
+        dsInfoObject.put(EMConstants.EMJSONKeys.URL, experimentTrial.getDatasourceInfo().getUrl().toString());
         dsInfoObject.put(EMConstants.EMJSONKeys.NAME, experimentTrial.getDatasourceInfo().getName());
         dsArray.put(dsInfoObject);
         infoObject.put(EMConstants.EMJSONKeys.DATASOURCE_INFO, dsArray);

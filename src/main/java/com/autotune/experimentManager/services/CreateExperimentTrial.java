@@ -42,6 +42,7 @@ public class CreateExperimentTrial extends HttpServlet {
 
         Gson gson = new Gson();
         String inputData = req.getReader().lines().collect(Collectors.joining());
+        inputData = inputData.replaceAll("-Dquarkus.http.io-threads=false", "").replaceAll("-Dquarkus.http.io-threads=true", "");
         ExperimentTrial experimentTrial = gson.fromJson(inputData, ExperimentTrial.class);
         JSONObject json = EMAPIHandler.getOlderJSON(experimentTrial);
         LOGGER.info("Input JSON obtained:");
