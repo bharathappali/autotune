@@ -15,8 +15,10 @@
  *******************************************************************************/
 package com.autotune.experimentManager.services;
 
+import com.autotune.common.experiments.ExperimentTrial;
 import com.autotune.experimentManager.data.ExperimentTrialData;
 import com.autotune.experimentManager.services.util.EMAPIHandler;
+import com.google.gson.Gson;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,9 +39,11 @@ public class CreateExperimentTrial extends HttpServlet {
     private static final Logger LOGGER = LoggerFactory.getLogger(CreateExperimentTrial.class);
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String inputData = req.getReader().lines().collect(Collectors.joining());
-        JSONObject json = new JSONObject(inputData);
 
+        Gson gson = new Gson();
+        String inputData = req.getReader().lines().collect(Collectors.joining());
+        ExperimentTrial experimentTrial = gson.fromJson(inputData, ExperimentTrial.class);
+        JSONObject json = EMAPIHandler.getOlderJSON(experimentTrial);
         LOGGER.info("Input JSON obtained:");
         LOGGER.info(json.toString(4));
         LOGGER.info("Creating ETD");

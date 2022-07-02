@@ -1,7 +1,9 @@
 package com.autotune.experimentManager.services.util;
 
+import com.autotune.common.experiments.ExperimentTrial;
 import com.autotune.experimentManager.core.ExperimentManager;
 import com.autotune.experimentManager.data.*;
+import com.autotune.experimentManager.data.input.EMConfigObject;
 import com.autotune.experimentManager.exceptions.EMInvalidInstanceCreation;
 import com.autotune.experimentManager.exceptions.IncompatibleInputJSONException;
 import com.autotune.experimentManager.services.CreateExperimentTrial;
@@ -80,5 +82,17 @@ public class EMAPIHandler {
         EMStageTransition transition = new EMStageTransition(runId, EMUtil.EMExpStages.CREATE_CONFIG);
         EMStageProcessQueue.getStageProcessQueueInstance().getQueue().add(transition);
         ExperimentManager.notifyQueueProcessor();
+    }
+
+    // Will be deprecated in future releases
+    public static JSONObject getOlderJSON(ExperimentTrial experimentTrial) {
+        System.out.println("You are using an outdated JSON will be deprecated in future releases");
+        JSONObject oldJson = new JSONObject();
+        JSONObject infoObject = new JSONObject();
+        JSONObject trailInfoObject = new JSONObject();
+        trailInfoObject.put(EMConstants.EMJSONKeys.TRIAL_ID, experimentTrial.getTrialInfo().getTrialId());
+        trailInfoObject.put(EMConstants.EMJSONKeys.TRIAL_NUM, experimentTrial.getTrialInfo().getTrialNum());
+        trailInfoObject.put(EMConstants.EMJSONKeys.TRIAL_RESULT_URL, experimentTrial.getTrialInfo().getTrialResultURL());
+        return oldJson;
     }
 }
