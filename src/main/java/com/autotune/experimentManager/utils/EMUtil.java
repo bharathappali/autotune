@@ -16,12 +16,18 @@
 
 package com.autotune.experimentManager.utils;
 
+import com.autotune.common.experiments.ContainerConfigData;
+import com.autotune.common.experiments.ExperimentTrial;
 import com.autotune.experimentManager.core.EMIterationManager;
 import com.autotune.experimentManager.data.ExperimentTrialData;
 import com.autotune.experimentManager.data.input.EMMetricInput;
 import com.autotune.experimentManager.data.input.metrics.EMMetricResult;
 import com.autotune.experimentManager.data.iteration.EMIterationData;
 import com.autotune.experimentManager.data.iteration.EMIterationMetricResult;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import org.json.JSONObject;
 
 import java.sql.Time;
@@ -32,6 +38,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class EMUtil {
+    private static DefaultKubernetesClient client;
+
     /**
     * EMExpStages is a collection of all stages that an experiment trial goes through to complete its lifecycle.
     *
@@ -491,5 +499,41 @@ public class EMUtil {
             }
         }
         return returnQuery;
+    }
+
+    public static KubernetesClient getKubernetesClient() {
+        if (null == client) {
+            client = new DefaultKubernetesClient();
+        }
+        return client;
+    }
+
+    public static Deployment getModifiedDeployment(String nameSpace, String deploymentName, ContainerConfigData containerConfigData) {
+        Deployment defaultDeployment = null;
+        try {
+            defaultDeployment = getKubernetesClient()
+                    .apps()
+                    .deployments()
+                    .inNamespace(nameSpace)
+                    .withName(deploymentName)
+                    .get();
+            defaultDeployment
+                    .getSpec()
+                    .getTemplate()
+                    .getSpec()
+                    .getContainers()
+                    .forEach(
+                            (deployedAppContainer) -> {
+                                ResourceRequirements resourcesRequirement = deployedAppContainer.getResources();
+                                resourcesRequirement.setRequests(containerConfigData.getRequestPropertiesMap());
+                                resourcesRequirement.setLimits(containerConfigData.getLimitPropertiesMap());
+                                deployedAppContainer.setResources(resourcesRequirement);
+                                deployedAppContainer.setEnv(containerConfigData.getEnvList());
+                            }
+                    );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return defaultDeployment;
     }
 }

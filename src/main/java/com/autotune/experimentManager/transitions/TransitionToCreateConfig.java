@@ -25,7 +25,7 @@ public class TransitionToCreateConfig extends AbstractBaseTransition {
     @Override
     public void transit(String runId) {
         ExperimentTrialData trialData = (ExperimentTrialData) EMMapper.getInstance().getMap().get(runId);
-        JSONArray containerConfigs = trialData.getConfig().getTrainingContainers();
+        //JSONArray containerConfigs = trialData.getConfig().getTrainingContainers();
         KubernetesClient client = new DefaultKubernetesClient();
         RollingUpdateDeployment rud = new RollingUpdateDeployment();
         IntOrString maxSurge = new IntOrString(1);
@@ -49,68 +49,68 @@ public class TransitionToCreateConfig extends AbstractBaseTransition {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        List<Container> deployedContainers = defaultDeployment.getSpec().getTemplate().getSpec().getContainers();
-        for (Container deployedAppContainer : deployedContainers) {
-            JSONArray configs = TransistionHelper.ConfigHelper.getContainerConfig(deployedAppContainer.getName(), containerConfigs);
-            for (Object config : configs) {
-                JSONObject obj = (JSONObject) config;
-                JSONObject containerObj = obj.getJSONObject("spec").getJSONObject("template").getJSONObject("spec")
-                        .getJSONObject("container");
-                ResourceRequirements resourcesRequirement = new ResourceRequirements();
-                if (containerObj.has("resources")) {
-                    resourcesRequirement = deployedAppContainer.getResources();
-                    JSONObject resourcesRec = containerObj.getJSONObject("resources");
-                    Map<String, Quantity> propertiesMap = new HashMap<String, Quantity>();
-                    JSONObject requests = resourcesRec.getJSONObject("requests");
-                    if (requests != null) {
-                        Iterator<String> keysItr = requests.keys();
-                        while (keysItr.hasNext()) {
-                            String key = keysItr.next();
-                            String value = requests.get(key).toString();
-                            propertiesMap.put(key, new Quantity(value));
-                        }
-
-                        resourcesRequirement.setRequests(propertiesMap);
-
-                    }
-                    propertiesMap.clear();
-                    JSONObject limits = resourcesRec.getJSONObject("limits");
-                    if (limits != null) {
-                        Iterator<String> keysItr = limits.keys();
-                        while (keysItr.hasNext()) {
-                            String key = keysItr.next();
-                            String value = requests.get(key).toString();
-                            propertiesMap.put(key, new Quantity(value));
-                        }
-
-                        resourcesRequirement.setLimits(propertiesMap);
-                    }
-                    deployedAppContainer.setResources(resourcesRequirement);
-                }
-                if (containerObj.has("env")) {
-                    JSONObject recommendedEnv = containerObj.getJSONObject("env");
-                    List<EnvVar> envList = new ArrayList<EnvVar>();
-                    Iterator<String> recIter = recommendedEnv.keys();
-                    while (recIter.hasNext()) {
-                        String key = recIter.next();
-                        String value = recommendedEnv.getString(key);
-
-                        // setting env. variables
-                        EnvVar arg = new EnvVar();
-                        arg.setName(key);
-                        arg.setValue(value);
-                        envList.add(arg);
-                    }
-                    EnvVar arg = new EnvVar();
-                    arg.setName("JAVA_OPTIONS");
-                    arg.setValue(recommendedEnv.getString("JDK_JAVA_OPTIONS"));
-                    envList.add(arg);
-                    deployedAppContainer.setEnv(envList);
-                }
-            }
-        }
-
-        trialData.setTrailDeployment(defaultDeployment);
+//        List<Container> deployedContainers = defaultDeployment.getSpec().getTemplate().getSpec().getContainers();
+//        for (Container deployedAppContainer : deployedContainers) {
+//            JSONArray configs = TransistionHelper.ConfigHelper.getContainerConfig(deployedAppContainer.getName(), containerConfigs);
+//            for (Object config : configs) {
+//                JSONObject obj = (JSONObject) config;
+//                JSONObject containerObj = obj.getJSONObject("spec").getJSONObject("template").getJSONObject("spec")
+//                        .getJSONObject("container");
+//                ResourceRequirements resourcesRequirement = new ResourceRequirements();
+//                if (containerObj.has("resources")) {
+//                    resourcesRequirement = deployedAppContainer.getResources();
+//                    JSONObject resourcesRec = containerObj.getJSONObject("resources");
+//                    Map<String, Quantity> propertiesMap = new HashMap<String, Quantity>();
+//                    JSONObject requests = resourcesRec.getJSONObject("requests");
+//                    if (requests != null) {
+//                        Iterator<String> keysItr = requests.keys();
+//                        while (keysItr.hasNext()) {
+//                            String key = keysItr.next();
+//                            String value = requests.get(key).toString();
+//                            propertiesMap.put(key, new Quantity(value));
+//                        }
+//
+//                        resourcesRequirement.setRequests(propertiesMap);
+//
+//                    }
+//                    propertiesMap.clear();
+//                    JSONObject limits = resourcesRec.getJSONObject("limits");
+//                    if (limits != null) {
+//                        Iterator<String> keysItr = limits.keys();
+//                        while (keysItr.hasNext()) {
+//                            String key = keysItr.next();
+//                            String value = requests.get(key).toString();
+//                            propertiesMap.put(key, new Quantity(value));
+//                        }
+//
+//                        resourcesRequirement.setLimits(propertiesMap);
+//                    }
+//                    deployedAppContainer.setResources(resourcesRequirement);
+//                }
+//                if (containerObj.has("env")) {
+//                    JSONObject recommendedEnv = containerObj.getJSONObject("env");
+//                    List<EnvVar> envList = new ArrayList<EnvVar>();
+//                    Iterator<String> recIter = recommendedEnv.keys();
+//                    while (recIter.hasNext()) {
+//                        String key = recIter.next();
+//                        String value = recommendedEnv.getString(key);
+//
+//                        // setting env. variables
+//                        EnvVar arg = new EnvVar();
+//                        arg.setName(key);
+//                        arg.setValue(value);
+//                        envList.add(arg);
+//                    }
+//                    EnvVar arg = new EnvVar();
+//                    arg.setName("JAVA_OPTIONS");
+//                    arg.setValue(recommendedEnv.getString("JDK_JAVA_OPTIONS"));
+//                    envList.add(arg);
+//                    deployedAppContainer.setEnv(envList);
+//                }
+//            }
+//        }
+//
+//        trialData.setTrailDeployment(defaultDeployment);
         processNextTransition(runId);
     }
 }

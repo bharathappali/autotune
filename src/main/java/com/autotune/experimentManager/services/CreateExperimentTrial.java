@@ -47,7 +47,7 @@ public class CreateExperimentTrial extends HttpServlet {
         LOGGER.info("Input JSON obtained:");
         LOGGER.info(json.toString(4));
         LOGGER.info("Creating ETD");
-        ExperimentTrialData trialData = EMAPIHandler.createETD(json);
+        ExperimentTrialData trialData = EMAPIHandler.createETD(json, experimentTrial);
         String runId = EMAPIHandler.registerTrial(trialData);
         LOGGER.info("Linking runID - " + runId + " to ETD");
         resp.setStatus(HttpServletResponse.SC_OK);

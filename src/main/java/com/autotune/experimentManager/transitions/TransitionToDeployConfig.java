@@ -1,10 +1,12 @@
 package com.autotune.experimentManager.transitions;
 
+import com.autotune.common.experiments.ExperimentTrial;
 import com.autotune.experimentManager.core.EMIterationManager;
 import com.autotune.experimentManager.data.EMMapper;
 import com.autotune.experimentManager.data.ExperimentTrialData;
 import com.autotune.experimentManager.data.iteration.EMIterationData;
 import com.autotune.experimentManager.utils.EMConstants;
+import com.autotune.experimentManager.utils.EMUtil;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -20,9 +22,22 @@ public class TransitionToDeployConfig extends AbstractBaseTransition{
         EMIterationManager emIterationManager = trialData.getEmIterationManager();
         KubernetesClient client = new DefaultKubernetesClient();
         if(emIterationManager.getCurrentIteration() == 1) {
-            LOGGER.info("Launching new config to the deployment");
-            Deployment createdDeployment = client.apps().deployments().inNamespace(trialData.getConfig().getDeploymentNamespace()).createOrReplace(trialData.getTrailDeployment());
-            trialData.setTrailDeployment(createdDeployment);
+            ExperimentTrial experimentTrial = trialData.getExperimentTrial();
+            experimentTrial.getTrialDetails().forEach((tracker, trialDetails) -> {
+                trialDetails.getPodContainers().forEach((imageName, podContainer) -> {
+                    podContainer.getTrialConfigs().forEach((trialNumber, containerConfigData) -> {
+                        Deployment modifiedDeployment = EMUtil.getModifiedDeployment(
+                                trialDetails.getDeploymentNameSpace(),
+                                trialDetails.getDeploymentName(),
+                                containerConfigData);
+                        client.apps()
+                                .deployments()
+                                .inNamespace(trialDetails.getDeploymentNameSpace())
+                                .withName(trialDetails.getDeploymentName())
+                                .createOrReplace(modifiedDeployment);
+                    });
+                });
+            });
         } else {
             LOGGER.info("Restarting the pod ... ");
             client.apps().deployments().inNamespace(trialData.getConfig().getDeploymentNamespace())

@@ -1,5 +1,6 @@
 package com.autotune.experimentManager.data;
 
+import com.autotune.common.experiments.ExperimentTrial;
 import com.autotune.experimentManager.core.EMIterationManager;
 import com.autotune.experimentManager.exceptions.EMInvalidInstanceCreation;
 import com.autotune.experimentManager.utils.EMUtil.EMExpStatus;
@@ -11,6 +12,7 @@ public class ExperimentTrialData {
     private String trialResult;
     private String trialResultInfo;
     private String trialResultError;
+    private ExperimentTrial experimentTrial;
     private EMTrialConfig config;
     private EMIterationManager emIterationManager;
     private Deployment defaultDeployment;
@@ -20,11 +22,15 @@ public class ExperimentTrialData {
     private EMExpStatus status;
     private boolean notifyTrialCompletion;
 
+    public ExperimentTrial getExperimentTrial() {
+        return experimentTrial;
+    }
+
     public EMIterationManager getEmIterationManager() {
         return emIterationManager;
     }
 
-    public ExperimentTrialData(EMTrialConfig config) throws EMInvalidInstanceCreation {
+    public ExperimentTrialData(EMTrialConfig config, ExperimentTrial experimentTrial) throws EMInvalidInstanceCreation {
         if (config == null) {
             throw new EMInvalidInstanceCreation();
         }
@@ -34,6 +40,7 @@ public class ExperimentTrialData {
         this.status = EMExpStatus.CREATED;
         this.notifyTrialCompletion = false;
         emIterationManager = new EMIterationManager(config.getEmConfigObject());
+        this.experimentTrial = experimentTrial;
     }
 
     public String getTrialResult() {
