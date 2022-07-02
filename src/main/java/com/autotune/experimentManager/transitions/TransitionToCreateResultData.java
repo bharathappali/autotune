@@ -16,7 +16,7 @@ public class TransitionToCreateResultData extends AbstractBaseTransition{
         LOGGER.info("Executing transition - TransitionToCreateResultData on thread - {} For RunId - {}", Thread.currentThread().getId(), runId);
 
         ExperimentTrialData trialData = (ExperimentTrialData) EMMapper.getInstance().getMap().get(runId);
-        TransistionHelper.CollectMetrics.startMetricCollection(trialData);
+//        TransistionHelper.CollectMetrics.startMetricCollection(trialData);
         EMIterationManager emIterationManager = trialData.getEmIterationManager();
         if (emIterationManager.getCurrentIteration() != emIterationManager.getIterations()) {
             EMUtil.EMExpStages nextStage = EMTransitionRegistry.getNextStage(EMUtil.EMExpStages.INIT);

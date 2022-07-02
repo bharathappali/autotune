@@ -381,6 +381,46 @@ public class EMUtil {
         }
     }
 
+    public static JSONObject getSummaryResult(ExperimentTrialData etd, String metric_name) {
+        JSONObject retJson = new JSONObject();
+        JSONObject generalInfo = new JSONObject();
+        float min = Float.MIN_VALUE;
+        float max = Float.MIN_VALUE;
+        float mean = Float.MIN_VALUE;
+        EMIterationManager emIterationManager = etd.getEmIterationManager();
+        ArrayList<EMIterationData> emIterationDataList = emIterationManager.getIterationDataList();
+        for (EMIterationData emIterationData : emIterationDataList) {
+            ArrayList<EMMetricInput> emMetricInputArrayList = etd.getConfig().getEmConfigObject().getDeployments().getTrainingDeployment().getAllMetrics();
+            for (EMMetricInput emMetricInput : emMetricInputArrayList) {
+                if (metric_name.equalsIgnoreCase(emMetricInput.getName())) {
+                    EMIterationMetricResult emIterationMetricResult = emIterationData.getEmIterationResult().getIterationMetricResult(emMetricInput.getName());
+                    for (EMMetricResult measurementResults : emIterationMetricResult.getMeasurementResults()) {
+                        if (measurementResults.getEmMetricGenericResults().getMin() != Float.MIN_VALUE)
+                            min = min + measurementResults.getEmMetricGenericResults().getMin();
+                        if (measurementResults.getEmMetricGenericResults().getMax() != Float.MIN_VALUE)
+                            max = max + measurementResults.getEmMetricGenericResults().getMax();
+                        if (measurementResults.getEmMetricGenericResults().getMean() != Float.MIN_VALUE)
+                            mean = mean + measurementResults.getEmMetricGenericResults().getMean();
+                    }
+                }
+            }
+        }
+        if (min != Float.MIN_VALUE) {
+            min = min / (emIterationDataList.size() * emIterationDataList.get(0).getMeasurementCycles());
+            generalInfo.put("min", min);
+        }
+        if (max != Float.MIN_VALUE) {
+            max = max / (emIterationDataList.size() * emIterationDataList.get(0).getMeasurementCycles());
+            generalInfo.put("max", max);
+        }
+        if (mean != Float.MIN_VALUE) {
+            mean = mean / (emIterationDataList.size() * emIterationDataList.get(0).getMeasurementCycles());
+            generalInfo.put("mean", mean);
+        }
+        retJson.put("general_info", generalInfo);
+        return retJson;
+    }
+
     public enum QueryType {
         SYSTEM,
         CONTAINER,

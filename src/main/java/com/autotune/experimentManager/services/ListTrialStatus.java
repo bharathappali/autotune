@@ -38,9 +38,6 @@ import java.util.ArrayList;
 public class ListTrialStatus extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-//        String inputData = req.getReader().lines().collect(Collectors.joining());
-//        JSONObject json = new JSONObject(inputData);
-//        String runId = json.getString(EMConstants.InputJsonKeys.GetTrailStatusInputKeys.RUN_ID);
         ArrayList<String> runIdList = new ArrayList<String>();
         boolean validRunId = true;
         String runIdParam = req.getParameter(EMConstants.InputJsonKeys.ListTrialStatusKeys.RUN_ID);
@@ -53,7 +50,7 @@ public class ListTrialStatus extends HttpServlet {
         }
 
         JSONArray API_RESPONSE_ARRAY = new JSONArray();
-
+        System.out.println(runIdList.toString());
         for (String runId : runIdList) {
             validRunId = true;
             JSONObject API_RESPONSE = null;
@@ -72,13 +69,13 @@ public class ListTrialStatus extends HttpServlet {
             String summary = req.getParameter(EMConstants.InputJsonKeys.ListTrialStatusKeys.SUMMARY);
 
             if(validRunId) {
-                if (null != summary && summary.equalsIgnoreCase("true")) {
+                //if (null != summary && summary.equalsIgnoreCase("true")) {
                     ExperimentTrialData etd = (ExperimentTrialData) EMMapper.getInstance().getMap().get(runId);
-                    if (etd.getStatus() == EMUtil.EMExpStatus.COMPLETED) {
-                        API_RESPONSE = TransistionHelper.MetricsFormatter.getMetricsJson(runId);
+//                    if (etd.getStatus() == EMUtil.EMExpStatus.COMPLETED) {
+                        API_RESPONSE = TransistionHelper.MetricsFormatter.getLiveMetricResult(runId, true, false);
                         API_RESPONSE.put(EMConstants.InputJsonKeys.ListTrialStatusKeys.STATUS, ((ExperimentTrialData) EMMapper.getInstance().getMap().get(runId)).getStatus().toString());
-                    }
-                }
+//                    }
+                //}
             }
 
             API_RESPONSE_ARRAY.put(API_RESPONSE);

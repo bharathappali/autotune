@@ -15,15 +15,16 @@
  *******************************************************************************/
 package com.autotune.experimentManager.services;
 
-import com.autotune.common.experiments.ExperimentTrial;
-import com.autotune.experimentManager.core.ExperimentTrialHandler;
-import com.google.gson.Gson;
+import com.autotune.experimentManager.data.ExperimentTrialData;
+import com.autotune.experimentManager.services.util.EMAPIHandler;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.stream.Collectors;
 
@@ -34,33 +35,23 @@ import java.util.stream.Collectors;
  */
 public class CreateExperimentTrial extends HttpServlet {
     private static final Logger LOGGER = LoggerFactory.getLogger(CreateExperimentTrial.class);
-    private static final String SERVLETCONTEXT_EM_KEY = "EM";
-
-    /**
-     * This API supports POST methode which is used to initiate experimental trials.
-     * Input payload should be in the format of JSON. Please refer documentation for more details.
-     * /createExperimentTrial is API endpoint,
-     * HTTP STATUS CODE - 201 is returned if experiment loaded successfully.
-     * HTTP STATUS CODE - 500 is returned for any error.
-     *
-     * @param request
-     * @param response
-     * @throws java.io.IOException
-     */
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws java.io.IOException {
-        Gson gson = new Gson();
-        HashMap<String, ExperimentTrial> experimentNameMap = new HashMap<String, ExperimentTrial>();
-        try {
-            String inputData = request.getReader().lines().collect(Collectors.joining());
-            ExperimentTrial experimentTrial = gson.fromJson(inputData, ExperimentTrial.class);
-            LOGGER.debug(experimentTrial.toString());
-            new ExperimentTrialHandler(experimentTrial).startExperimentTrials();  // Call this on thread to make it asynchronous
-            response.setStatus(HttpServletResponse.SC_CREATED);
-        } catch (Exception e) {
-            LOGGER.error("{}", e);
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String inputData = req.getReader().lines().collect(Collectors.joining());
+        JSONObject json = new JSONObject(inputData);
+
+        LOGGER.info("Input JSON obtained:");
+        LOGGER.info(json.toString(4));
+        LOGGER.info("Creating ETD");
+        ExperimentTrialData trialData = EMAPIHandler.createETD(json);
+        String runId = EMAPIHandler.registerTrial(trialData);
+        LOGGER.info("Linking runID - " + runId + " to ETD");
+        resp.setStatus(HttpServletResponse.SC_OK);
+        resp.getWriter().println(runId);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        doGet(req, resp);
     }
 }
