@@ -85,7 +85,7 @@ public class ExperimentDBService {
 
             KruizeObject kruizeObject = experimentsMap.get(experimentResultData.getExperiment_name());
             KruizeRecommendationEntry kr = DBHelpers.Converters.KruizeObjectConverters.
-                    convertKruizeObjectTORecommendation(kruizeObject, experimentResultData);
+                    convertKruizeObjectTORecommendation(kruizeObject);
             if (null != kr) {
                 new ExperimentDAOImpl().addRecommendationToDB(kr);
             }

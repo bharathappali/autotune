@@ -136,17 +136,14 @@ public class DBHelpers {
                 return kruizeResultsEntry;
             }
 
-            public static KruizeRecommendationEntry convertKruizeObjectTORecommendation(KruizeObject kruizeObject, ExperimentResultData experimentResultData) {
+            public static KruizeRecommendationEntry convertKruizeObjectTORecommendation(KruizeObject kruizeObject) {
                 KruizeRecommendationEntry kruizeRecommendationEntry = null;
                 Timestamp monitoringEndTime = null;
                 Boolean checkForTimestamp = false;
                 Boolean getLatest = true;
                 try {
-                    if (null != experimentResultData) {
-                        monitoringEndTime = experimentResultData.getIntervalEndTime();
-                        checkForTimestamp = true;
-                        getLatest = false;
-                    }
+                    checkForTimestamp = false;
+                    getLatest = false;
                     ListRecommendationsAPIObject listRecommendationsAPIObject = convertKruizeObjectToListRecommendationSO(
                                     kruizeObject,
                                     getLatest,
