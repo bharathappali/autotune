@@ -59,6 +59,7 @@ public class Analyzer {
         context.addServlet(ListDatasources.class, ServerContext.LIST_DATASOURCES);
         context.addServlet(DSMetadataService.class, ServerContext.DATASOURCE_METADATA);
         context.addServlet(BulkService.class, ServerContext.BULK_SERVICE);
+        context.addServlet(ApplyRecommendation.class, ServerContext.APPLY_RECOMMENDATIONS);
 
         // Adding UI support API's
         context.addServlet(ListNamespaces.class, ServerContext.LIST_NAMESPACES);
