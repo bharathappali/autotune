@@ -8,15 +8,25 @@ public class AcceleratorDeviceData implements AcceleratorDeviceDetails {
     private final String hostName;
     private final String UUID;
     private final String deviceName;
-    private boolean isMIG;
+    private final String profile;
+    private boolean isMIGSupported;
+    private boolean isMIGPartition;
 
-    public AcceleratorDeviceData (String modelName, String hostName, String UUID, String deviceName, boolean isMIG) {
+    public AcceleratorDeviceData (String modelName,
+                                  String hostName,
+                                  String UUID,
+                                  String deviceName,
+                                  String profile,
+                                  boolean isMIGSupported,
+                                  boolean isMIGPartition) {
         this.manufacturer = "NVIDIA";
         this.modelName = modelName;
         this.hostName = hostName;
         this.UUID = UUID;
         this.deviceName = deviceName;
-        this.isMIG = isMIG;
+        this.profile = profile;
+        this.isMIGSupported = isMIGSupported;
+        this.isMIGPartition = isMIGPartition;
     }
 
     @Override
@@ -44,14 +54,17 @@ public class AcceleratorDeviceData implements AcceleratorDeviceDetails {
         return deviceName;
     }
 
-    public boolean isMIG() {
-        return isMIG;
+    public String getProfile() {
+        return profile;
     }
 
-    public void setMIG(boolean isMIG) {
-        this.isMIG = isMIG;
+    public boolean isMIGSupported() {
+        return isMIGSupported;
     }
 
+    public boolean isMIGPartition() {
+        return isMIGPartition;
+    }
     @Override
     public AnalyzerConstants.DeviceType getType() {
         return AnalyzerConstants.DeviceType.ACCELERATOR;
