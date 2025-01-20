@@ -17,6 +17,7 @@ import com.autotune.analyzer.recommendations.term.Terms;
 import com.autotune.analyzer.recommendations.utils.RecommendationUtils;
 import com.autotune.analyzer.utils.AnalyzerConstants;
 import com.autotune.analyzer.utils.AnalyzerErrorConstants;
+import com.autotune.analyzer.utils.InstasliceHelper;
 import com.autotune.common.data.ValidationOutputData;
 import com.autotune.common.data.metrics.*;
 import com.autotune.common.data.result.ContainerData;
@@ -1832,18 +1833,23 @@ public class RecommendationEngine {
 
             String maxDateQuery = null;
             String acceleratorDetectionQuery = null;
+            String acceleratorMigDetectionQuery = null;
+
             if (kruizeObject.isContainerExperiment()) {
-                maxDateQuery = getMaxDateQuery(metricProfile, AnalyzerConstants.MetricName.maxDate.name());
-                acceleratorDetectionQuery = getMaxDateQuery(metricProfile, AnalyzerConstants.MetricName.gpuMemoryUsage.name());
+                maxDateQuery = getMaxQueryByName(metricProfile, AnalyzerConstants.MetricName.maxDate.name());
+                acceleratorDetectionQuery = getMaxQueryByName(metricProfile, AnalyzerConstants.MetricName.gpuMemoryUsage.name());
+                acceleratorMigDetectionQuery = getMaxQueryByName(metricProfile, AnalyzerConstants.MetricName.acceleratorMigMemoryUsage.name());
+
                 fetchContainerMetricsBasedOnDataSourceAndProfile(kruizeObject,
                         interval_end_time,
                         interval_start_time,
                         dataSourceInfo,
                         metricProfile,
                         maxDateQuery,
-                        acceleratorDetectionQuery);
+                        acceleratorDetectionQuery,
+                        acceleratorMigDetectionQuery);
             } else if (kruizeObject.isNamespaceExperiment()) {
-                maxDateQuery = getMaxDateQuery(metricProfile, AnalyzerConstants.MetricName.namespaceMaxDate.name());
+                maxDateQuery = getMaxQueryByName(metricProfile, AnalyzerConstants.MetricName.namespaceMaxDate.name());
                 fetchNamespaceMetricsBasedOnDataSourceAndProfile(kruizeObject, interval_end_time, interval_start_time, dataSourceInfo, metricProfile, maxDateQuery);
             }
         } catch (Exception e) {
@@ -2017,6 +2023,8 @@ public class RecommendationEngine {
      * @param dataSourceInfo      DataSource object
      * @param metricProfile       performance profile to be used
      * @param maxDateQuery        max date query for containers
+     * @param acceleratorDetectionQuery query to detect accelerator
+     * @param acceleratorMigDetectionQuery query to detect MIG partitions of accelerators
      * @throws Exception
      */
     private void fetchContainerMetricsBasedOnDataSourceAndProfile(KruizeObject kruizeObject,
@@ -2025,7 +2033,8 @@ public class RecommendationEngine {
                                                                   DataSourceInfo dataSourceInfo,
                                                                   PerformanceProfile metricProfile,
                                                                   String maxDateQuery,
-                                                                  String acceleratorDetectionQuery) throws Exception, FetchMetricsError {
+                                                                  String acceleratorDetectionQuery,
+                                                                  String acceleratorMigDetectionQuery) throws Exception, FetchMetricsError {
         try {
             long interval_end_time_epoc = 0;
             long interval_start_time_epoc = 0;
@@ -2042,20 +2051,49 @@ public class RecommendationEngine {
                 String workload_type = k8sObject.getType();
                 HashMap<String, ContainerData> containerDataMap = k8sObject.getContainerDataMap();
 
+                // Check if the instaslice has created MIG's for the workloads
+                InstasliceHelper instasliceHelper = InstasliceHelper.getInstance();
+                String gpuUUID = instasliceHelper.getUUID(namespace, workload);
+                String gpuProfile = instasliceHelper.getMIGProfile(namespace, workload);
+
                 for (Map.Entry<String, ContainerData> entry : containerDataMap.entrySet()) {
                     ContainerData containerData = entry.getValue();
 
+                    boolean containerAcceleratorDetected = false;
+                    boolean containerAcceleratorPartitionDetected = false;
+
                     // Check if the container data has Accelerator support else check for Accelerator metrics
-                    if (null == containerData.getContainerDeviceList() || !containerData.getContainerDeviceList().isAcceleratorDeviceDetected()) {
-                        RecommendationUtils.markAcceleratorDeviceStatusToContainer(containerData,
-                                maxDateQuery,
-                                namespace,
-                                workload,
-                                workload_type,
-                                dataSourceInfo,
-                                kruizeObject.getTerms(),
-                                measurementDurationMinutesInDouble,
-                                acceleratorDetectionQuery);
+                    if (null == gpuUUID && (null == containerData.getContainerDeviceList() || !containerData.getContainerDeviceList().isAcceleratorDeviceDetected())) {
+                        containerAcceleratorDetected = RecommendationUtils.markAcceleratorDeviceStatusToContainer(containerData,
+                                                                            maxDateQuery,
+                                                                            namespace,
+                                                                            workload,
+                                                                            workload_type,
+                                                                            dataSourceInfo,
+                                                                            kruizeObject.getTerms(),
+                                                                            measurementDurationMinutesInDouble,
+                                                                            acceleratorDetectionQuery);
+                    }
+
+                    // Check if it's a partition
+                    if (!containerAcceleratorDetected) {
+                        if (null != gpuUUID) {
+                            containerAcceleratorPartitionDetected = RecommendationUtils.markAcceleratorPartitionDeviceStatusToContainer(containerData,
+                                    maxDateQuery,
+                                    namespace,
+                                    workload,
+                                    workload_type,
+                                    dataSourceInfo,
+                                    kruizeObject.getTerms(),
+                                    measurementDurationMinutesInDouble,
+                                    acceleratorMigDetectionQuery,
+                                    gpuUUID,
+                                    gpuProfile);
+
+                            if (null == kruizeObject.getDefaultUpdater()) {
+                                kruizeObject.setDefaultUpdater(AnalyzerConstants.RecommendationUpdaterConstants.SupportedUpdaters.ACCELERATOR);
+                            }
+                        }
                     }
 
                     String containerName = containerData.getContainer_name();
@@ -2120,11 +2158,16 @@ public class RecommendationEngine {
                             AnalyzerConstants.MetricName.gpuCoreUsage.toString(),
                             AnalyzerConstants.MetricName.gpuMemoryUsage.toString()
                     );
+
+                    List<String> acceleratorPartitionFunctions = Arrays.asList(
+                            AnalyzerConstants.MetricName.acceleratorMigMemoryUsage.toString()
+                    );
                     // Iterate over metrics and aggregation functions
                     for (Metric metricEntry : metricList) {
 
                         boolean isAcceleratorMetric = false;
                         boolean fetchAcceleratorMetrics = false;
+                        boolean isAcceleratorPartitionMetric = false;
 
                         if (acceleratorFunctions.contains(metricEntry.getName())) {
                             isAcceleratorMetric = true;
@@ -2136,8 +2179,21 @@ public class RecommendationEngine {
                             fetchAcceleratorMetrics = true;
                         }
 
+                        if (acceleratorPartitionFunctions.contains(metricEntry.getName())) {
+                            isAcceleratorPartitionMetric = true;
+                        }
+
+                        if (isAcceleratorPartitionMetric
+                                && null != containerData.getContainerDeviceList()
+                                && containerData.getContainerDeviceList().isAcceleratorPartitionDetected()) {
+                            fetchAcceleratorMetrics = true;
+                        }
+
                         // Skip fetching Accelerator metrics if the workload doesn't use Accelerator
                         if (isAcceleratorMetric && !fetchAcceleratorMetrics)
+                            continue;
+
+                        if (isAcceleratorPartitionMetric && !fetchAcceleratorMetrics)
                             continue;
 
                         HashMap<String, AggregationFunctions> aggregationFunctions = metricEntry.getAggregationFunctionsMap();
@@ -2158,17 +2214,28 @@ public class RecommendationEngine {
                                 format = KruizeConstants.JSONKeys.CORES;
                             } else if (memFunction.contains(metricEntry.getName())) {
                                 format = KruizeConstants.JSONKeys.BYTES;
-                            } else if (isAcceleratorMetric) {
+                            } else if (isAcceleratorMetric || isAcceleratorPartitionMetric) {
                                 format = KruizeConstants.JSONKeys.CORES;
                             }
 
-                            // If promQL is determined, fetch metrics from the datasource
-                            promQL = promQL
-                                    .replace(AnalyzerConstants.NAMESPACE_VARIABLE, namespace)
-                                    .replace(AnalyzerConstants.CONTAINER_VARIABLE, containerName)
-                                    .replace(AnalyzerConstants.MEASUREMENT_DURATION_IN_MIN_VARAIBLE, Integer.toString(measurementDurationMinutesInDouble.intValue()))
-                                    .replace(AnalyzerConstants.WORKLOAD_VARIABLE, workload)
-                                    .replace(AnalyzerConstants.WORKLOAD_TYPE_VARIABLE, workload_type);
+                            if (isAcceleratorPartitionMetric) {
+
+                                if (null == gpuUUID)
+                                    continue;
+
+                                promQL = promQL
+                                        .replace(AnalyzerConstants.UUID_VARIABLE, gpuUUID)
+                                        .replace(AnalyzerConstants.PROFILE_VARIABLE, gpuProfile)
+                                        .replace(AnalyzerConstants.MEASUREMENT_DURATION_IN_MIN_VARAIBLE, Integer.toString(measurementDurationMinutesInDouble.intValue()));
+                            } else {
+                                // If promQL is determined, fetch metrics from the datasource
+                                promQL = promQL
+                                        .replace(AnalyzerConstants.NAMESPACE_VARIABLE, namespace)
+                                        .replace(AnalyzerConstants.CONTAINER_VARIABLE, containerName)
+                                        .replace(AnalyzerConstants.MEASUREMENT_DURATION_IN_MIN_VARAIBLE, Integer.toString(measurementDurationMinutesInDouble.intValue()))
+                                        .replace(AnalyzerConstants.WORKLOAD_VARIABLE, workload)
+                                        .replace(AnalyzerConstants.WORKLOAD_TYPE_VARIABLE, workload_type);
+                            }
 
                             LOGGER.debug(promQL);
                             String podMetricsUrl;
@@ -2190,7 +2257,7 @@ public class RecommendationEngine {
                                     continue;
 
                                 // Process fetched metrics
-                                if (isAcceleratorMetric) {
+                                if (isAcceleratorMetric || isAcceleratorPartitionMetric){
                                     for (JsonElement result : resultArray) {
                                         JsonObject resultObject = result.getAsJsonObject();
                                         JsonObject metricObject = resultObject.getAsJsonObject(KruizeConstants.JSONKeys.METRIC);
@@ -2201,7 +2268,15 @@ public class RecommendationEngine {
                                         if (metricObject.get(KruizeConstants.JSONKeys.MODEL_NAME).getAsString().isEmpty())
                                             continue;
 
-                                        ArrayList<DeviceDetails> deviceDetails = containerData.getContainerDeviceList().getDevices(AnalyzerConstants.DeviceType.ACCELERATOR);
+                                        ArrayList<DeviceDetails> deviceDetails = null;
+
+                                        if (isAcceleratorMetric) {
+                                            deviceDetails = containerData.getContainerDeviceList().getDevices(AnalyzerConstants.DeviceType.ACCELERATOR);
+                                        }
+
+                                        if (isAcceleratorPartitionMetric) {
+                                            deviceDetails = containerData.getContainerDeviceList().getDevices(AnalyzerConstants.DeviceType.ACCELERATOR_PARTITION);
+                                        }
                                         // Continuing to next element
                                         // All other elements will also fail as there is no Accelerator attached
                                         // Theoretically, it doesn't fail, but the future implementations may change
@@ -2227,7 +2302,8 @@ public class RecommendationEngine {
                                                 metricObject.get(KruizeConstants.JSONKeys.HOSTNAME).getAsString(),
                                                 metricObject.get(KruizeConstants.JSONKeys.UUID).getAsString(),
                                                 metricObject.get(KruizeConstants.JSONKeys.DEVICE).getAsString(),
-                                                null, true, false);
+                                                containerAcceleratorDeviceData.getProfile(),
+                                                true, containerAcceleratorDeviceData.isMIGPartition());
 
                                         JsonArray valuesArray = resultObject.getAsJsonArray(KruizeConstants.DataSourceConstants
                                                 .DataSourceQueryJSONKeys.VALUES);
@@ -2238,6 +2314,13 @@ public class RecommendationEngine {
                                             JsonArray valueArray = element.getAsJsonArray();
                                             long epochTime = valueArray.get(0).getAsLong();
                                             double value = valueArray.get(1).getAsDouble();
+
+                                            // Currently only supports 40GB GPU's needs to be made dynamic based on card memory
+                                            if (isAcceleratorPartitionMetric) {
+                                                double cardFrameBuffer = RecommendationUtils.getFrameBufferBasedOnModel(containerAcceleratorDeviceData.getModelName());
+                                                if (cardFrameBuffer > 0)
+                                                    value = (value / cardFrameBuffer) * 100;
+                                            }
                                             String timestamp = sdf.format(new Date(epochTime * KruizeConstants.TimeConv.NO_OF_MSECS_IN_SEC));
                                             Date date = sdf.parse(timestamp);
                                             Timestamp tempTime = new Timestamp(date.getTime());
@@ -2335,7 +2418,7 @@ public class RecommendationEngine {
      *
      * @param metricProfile performance profile to be used
      */
-    private String getMaxDateQuery(PerformanceProfile metricProfile, String metricName) {
+    private String getMaxQueryByName(PerformanceProfile metricProfile, String metricName) {
         List<Metric> metrics = metricProfile.getSloInfo().getFunctionVariables();
         for (Metric metric : metrics) {
             String name = metric.getName();

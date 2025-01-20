@@ -94,6 +94,8 @@ public class AnalyzerConstants {
     public static final String KRUIZE_LOCAL_DDL_SQL = "kruize_local_ddl.sql";
     public static final String VERSION = "version";
     public static final String DATASOURCE_NAME = "dataSourceName";
+    public static final String UUID_VARIABLE = "$UUID$";
+    public static final String PROFILE_VARIABLE = "$GPU_I_PROFILE$";
 
 
     private AnalyzerConstants() {
@@ -204,7 +206,8 @@ public class AnalyzerConstants {
         namespaceRunningPods,
         namespaceMaxDate,
         gpuCoreUsage,
-        gpuMemoryUsage
+        gpuMemoryUsage,
+        acceleratorMigMemoryUsage
     }
 
     public enum K8S_OBJECT_TYPES {
@@ -227,7 +230,8 @@ public class AnalyzerConstants {
         CPU,
         MEMORY,
         NETWORK,
-        ACCELERATOR
+        ACCELERATOR,
+        ACCELERATOR_PARTITION
     }
 
     public enum DeviceParameters {
@@ -689,6 +693,7 @@ public class AnalyzerConstants {
         public static final int DEFAULT_INITIAL_DELAY = 30;
         public static final class SupportedUpdaters {
             public static final String VPA = "vpa";
+            public static final String ACCELERATOR = "accelerator";
 
             private SupportedUpdaters() {
 

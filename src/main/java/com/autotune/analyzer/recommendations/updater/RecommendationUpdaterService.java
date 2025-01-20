@@ -19,6 +19,7 @@ package com.autotune.analyzer.recommendations.updater;
 import com.autotune.analyzer.experiment.ExperimentInterface;
 import com.autotune.analyzer.experiment.ExperimentInterfaceImpl;
 import com.autotune.analyzer.kruizeObject.KruizeObject;
+import com.autotune.analyzer.recommendations.updater.accelerator.AcceleratorUpdaterImpl;
 import com.autotune.analyzer.recommendations.updater.vpa.VpaUpdaterImpl;
 import com.autotune.analyzer.utils.AnalyzerConstants;
 import com.autotune.analyzer.utils.AnalyzerErrorConstants;
@@ -59,6 +60,11 @@ public class RecommendationUpdaterService {
                         if (kruizeObject.getDefaultUpdater().equalsIgnoreCase(AnalyzerConstants.RecommendationUpdaterConstants.SupportedUpdaters.VPA)) {
                             VpaUpdaterImpl vpaUpdater = VpaUpdaterImpl.getInstance();
                             vpaUpdater.applyResourceRecommendationsForExperiment(kruizeObject);
+                        }
+
+                        if (kruizeObject.getDefaultUpdater().equalsIgnoreCase(AnalyzerConstants.RecommendationUpdaterConstants.SupportedUpdaters.ACCELERATOR)) {
+                            AcceleratorUpdaterImpl acceleratorUpdater = AcceleratorUpdaterImpl.getInstance();
+                            acceleratorUpdater.applyResourceRecommendationsForExperiment(kruizeObject);
                         }
                     }
                 } catch (Exception e) {

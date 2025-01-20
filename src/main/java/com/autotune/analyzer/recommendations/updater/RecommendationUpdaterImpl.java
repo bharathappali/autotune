@@ -21,6 +21,7 @@ import com.autotune.analyzer.exceptions.FetchMetricsError;
 import com.autotune.analyzer.exceptions.InvalidRecommendationUpdaterType;
 import com.autotune.analyzer.kruizeObject.KruizeObject;
 import com.autotune.analyzer.recommendations.engine.RecommendationEngine;
+import com.autotune.analyzer.recommendations.updater.accelerator.AcceleratorUpdaterImpl;
 import com.autotune.analyzer.recommendations.updater.vpa.VpaUpdaterImpl;
 import com.autotune.analyzer.utils.AnalyzerConstants;
 import com.autotune.analyzer.utils.AnalyzerErrorConstants;
@@ -42,7 +43,9 @@ public class RecommendationUpdaterImpl implements RecommendationUpdater {
     public RecommendationUpdaterImpl getUpdaterInstance(String updaterType) throws InvalidRecommendationUpdaterType {
         if (AnalyzerConstants.RecommendationUpdaterConstants.SupportedUpdaters.VPA.equalsIgnoreCase(updaterType)) {
             return VpaUpdaterImpl.getInstance();
-        } else {
+        } if (AnalyzerConstants.RecommendationUpdaterConstants.SupportedUpdaters.ACCELERATOR.equalsIgnoreCase(updaterType)) {
+            return AcceleratorUpdaterImpl.getInstance();
+        }else {
             throw new InvalidRecommendationUpdaterType(String.format(AnalyzerErrorConstants.RecommendationUpdaterErrors.UNSUPPORTED_UPDATER_TYPE, updaterType));
         }
     }
