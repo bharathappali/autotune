@@ -360,6 +360,7 @@ public class CommonUtils {
     public static RecommendationConfigItem formatCpuUnits(RecommendationConfigItem configItem) {
         if (configItem == null || configItem.getAmount() == null || configItem.getFormat() == null) {
             return new RecommendationConfigItem(KruizeConstants.ErrorMsgs.RecommendationErrorMsgs.AMT_FORMAT_IS_NULL);
+
         }
 
         String format = configItem.getFormat().toLowerCase();

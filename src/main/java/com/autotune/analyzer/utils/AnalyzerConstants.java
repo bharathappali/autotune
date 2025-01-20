@@ -107,7 +107,6 @@ public class AnalyzerConstants {
     public static final String CONTAINER = "container";
     public static final int DEFAULT_MEASUREMENT_DURATION_INT = 15;
 
-
     private AnalyzerConstants() {
     }
 

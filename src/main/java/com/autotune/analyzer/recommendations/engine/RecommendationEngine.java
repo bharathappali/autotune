@@ -2183,6 +2183,7 @@ public class RecommendationEngine {
                     gpuProfile = instasliceHelper.getMIGProfile(namespace, workload);
                 }
 
+
                 for (Map.Entry<String, ContainerData> entry : containerDataMap.entrySet()) {
                     ContainerData containerData = entry.getValue();
 
@@ -2191,6 +2192,7 @@ public class RecommendationEngine {
 
                     // Check if the container data has Accelerator support else check for Accelerator metrics
                     if (!isROS && null == gpuUUID && (null == containerData.getContainerDeviceList() || !containerData.getContainerDeviceList().isAcceleratorDeviceDetected())) {
+
                         containerAcceleratorDetected = RecommendationUtils.markAcceleratorDeviceStatusToContainer(containerData,
                                                                             maxDateQuery,
                                                                             namespace,
@@ -2204,6 +2206,7 @@ public class RecommendationEngine {
 
                     // Check if it's a partition
                     if (!isROS && !containerAcceleratorDetected) {
+
                         if (null != gpuUUID) {
                             containerAcceleratorPartitionDetected = RecommendationUtils.markAcceleratorPartitionDeviceStatusToContainer(containerData,
                                     maxDateQuery,
@@ -2219,6 +2222,7 @@ public class RecommendationEngine {
 
                             if (null == kruizeObject.getDefaultUpdater()) {
                                 kruizeObject.setDefaultUpdater(AnalyzerConstants.AutoscalerConstants.SupportedUpdaters.ACCELERATOR);
+
                             }
                         }
                     }
