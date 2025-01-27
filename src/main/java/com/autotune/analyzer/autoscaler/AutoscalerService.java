@@ -47,21 +47,22 @@ public class AutoscalerService {
                     AutoscalerImpl autoscaler = new AutoscalerImpl();
                     Map<String, KruizeObject> experiments = getAutoModeExperiments();
                     for (Map.Entry<String, KruizeObject> experiment : experiments.entrySet()) {
-                        KruizeObject kruizeObject = autoscaler.generateResourceRecommendationsForExperiment(experiment.getValue().getExperimentName());
+//                        KruizeObject kruizeObject = autoscaler.generateResourceRecommendationsForExperiment(experiment.getValue().getExperimentName());
+                        KruizeObject kruizeObject = experiment.getValue();
                         // TODO:// add default updater in kruizeObject and check if GPU recommendations are present
                         if (kruizeObject.getDefaultUpdater() == null) {
-                             kruizeObject.setDefaultUpdater(AnalyzerConstants.AutoscalerConstants.SupportedUpdaters.VPA);
+                             kruizeObject.setDefaultUpdater(AnalyzerConstants.AutoscalerConstants.SupportedUpdaters.ACCELERATOR);
                         }
 
-                        if (kruizeObject.getDefaultUpdater().equalsIgnoreCase(AnalyzerConstants.AutoscalerConstants.SupportedUpdaters.VPA)) {
-                            VpaAutoscalerImpl vpaUpdater = VpaAutoscalerImpl.getInstance();
-                            vpaUpdater.applyResourceRecommendationsForExperiment(kruizeObject);
-                        }
-
-                        if (kruizeObject.getDefaultUpdater().equalsIgnoreCase(AnalyzerConstants.AutoscalerConstants.SupportedUpdaters.ACCELERATOR)) {
-                            AcceleratorAutoscalerImpl acceleratorUpdater = AcceleratorAutoscalerImpl.getInstance();
-                            acceleratorUpdater.applyResourceRecommendationsForExperiment(kruizeObject);
-                        }
+//                        if (kruizeObject.getDefaultUpdater().equalsIgnoreCase(AnalyzerConstants.AutoscalerConstants.SupportedUpdaters.VPA)) {
+//                            VpaAutoscalerImpl vpaUpdater = VpaAutoscalerImpl.getInstance();
+//                            vpaUpdater.applyResourceRecommendationsForExperiment(kruizeObject);
+//                        }
+//
+//                        if (kruizeObject.getDefaultUpdater().equalsIgnoreCase(AnalyzerConstants.AutoscalerConstants.SupportedUpdaters.ACCELERATOR)) {
+//                            AcceleratorAutoscalerImpl acceleratorUpdater = AcceleratorAutoscalerImpl.getInstance();
+//                            acceleratorUpdater.applyResourceRecommendationsForExperiment(kruizeObject);
+//                        }
                     }
                 } catch (Exception e) {
                     LOGGER.error(e.getMessage());
