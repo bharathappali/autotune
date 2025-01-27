@@ -51,16 +51,17 @@ public class RecommendationUpdaterService {
                     RecommendationUpdaterImpl updater = new RecommendationUpdaterImpl();
                     Map<String, KruizeObject> experiments = getAutoModeExperiments();
                     for (Map.Entry<String, KruizeObject> experiment : experiments.entrySet()) {
-                        KruizeObject kruizeObject = updater.generateResourceRecommendationsForExperiment(experiment.getValue().getExperimentName());
+//                        KruizeObject kruizeObject = updater.generateResourceRecommendationsForExperiment(experiment.getValue().getExperimentName());
+                        KruizeObject kruizeObject = experiment.getValue();
                         // TODO:// add default updater in kruizeObject and check if GPU recommendations are present
                         if (kruizeObject.getDefaultUpdater() == null) {
-                             kruizeObject.setDefaultUpdater(AnalyzerConstants.RecommendationUpdaterConstants.SupportedUpdaters.VPA);
+                             kruizeObject.setDefaultUpdater(AnalyzerConstants.RecommendationUpdaterConstants.SupportedUpdaters.ACCELERATOR);
                         }
 
-                        if (kruizeObject.getDefaultUpdater().equalsIgnoreCase(AnalyzerConstants.RecommendationUpdaterConstants.SupportedUpdaters.VPA)) {
-                            VpaUpdaterImpl vpaUpdater = VpaUpdaterImpl.getInstance();
-                            vpaUpdater.applyResourceRecommendationsForExperiment(kruizeObject);
-                        }
+//                        if (kruizeObject.getDefaultUpdater().equalsIgnoreCase(AnalyzerConstants.RecommendationUpdaterConstants.SupportedUpdaters.VPA)) {
+//                            VpaUpdaterImpl vpaUpdater = VpaUpdaterImpl.getInstance();
+//                            vpaUpdater.applyResourceRecommendationsForExperiment(kruizeObject);
+//                        }
 
                         if (kruizeObject.getDefaultUpdater().equalsIgnoreCase(AnalyzerConstants.RecommendationUpdaterConstants.SupportedUpdaters.ACCELERATOR)) {
                             AcceleratorUpdaterImpl acceleratorUpdater = AcceleratorUpdaterImpl.getInstance();

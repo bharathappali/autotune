@@ -77,78 +77,96 @@ public class AcceleratorUpdaterImpl extends RecommendationUpdaterImpl {
 
             for (Map.Entry<String, ContainerData> entry : containers.entrySet()) {
                 String containerName = entry.getKey();
-                ContainerData containerData = entry.getValue();
+//                ContainerData containerData = entry.getValue();
+//
+//                Map<Timestamp, MappedRecommendationForTimestamp> timestampMap = containerData.getContainerRecommendations().getData();
+//                if (null == timestampMap || timestampMap.isEmpty()) {
+//                    System.out.println("Timestamp map is empty");
+//                    continue;
+//                }
+//
+//
+//                Map.Entry<Timestamp, MappedRecommendationForTimestamp> latestEntry = null;
+//                for (Map.Entry<Timestamp, MappedRecommendationForTimestamp> timestampEntry : timestampMap.entrySet()) {
+//                    if (latestEntry == null || timestampEntry.getKey().after(latestEntry.getKey()))
+//                        latestEntry = timestampEntry;
+//                }
+//
+//                MappedRecommendationForTimestamp latestRecommendation = latestEntry.getValue();
+//                if (null == latestRecommendation) {
+//                    System.out.println("latest recommendation is null");
+//                    continue;
+//                }
+//
+//
+//                TermRecommendations shortTermRec = latestRecommendation.getShortTermRecommendations();
+//                HashMap<AnalyzerConstants.ResourceSetting,
+//                        HashMap<AnalyzerConstants.RecommendationItem, RecommendationConfigItem>> existingMap =
+//                        shortTermRec.getCostRecommendations().getConfig();
+//
+//                HashMap<AnalyzerConstants.ResourceSetting,
+//                        HashMap<AnalyzerConstants.RecommendationItem, RecommendationConfigItem>> updatedRec = new HashMap<>();
+//
+//                // Process requests
+//                HashMap<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> updatedRequests = new HashMap<>();
+//                Map<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> existingRequests = existingMap.get(AnalyzerConstants.ResourceSetting.requests);
+//
+//                for (Map.Entry<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> requestMapEntry : existingRequests.entrySet()) {
+//                    AnalyzerConstants.RecommendationItem recommendationItem = requestMapEntry.getKey();
+//                    RecommendationConfigItem recommendationConfigItem = requestMapEntry.getValue();
+//
+//                    if (recommendationItem == AnalyzerConstants.RecommendationItem.CPU) {
+//                        updatedRequests.put(recommendationItem, CommonUtils.formatCpuUnits(recommendationConfigItem));
+//                    } else if (recommendationItem == AnalyzerConstants.RecommendationItem.MEMORY) {
+//                        updatedRequests.put(recommendationItem, CommonUtils.formatMemoryUnits(recommendationConfigItem));
+//                    } else {
+//                        updatedRequests.put(recommendationItem, CommonUtils.formatAcceleratorUnits(recommendationConfigItem));
+//                    }
+//                }
+//
+//                HashMap<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> updatedLimits = new HashMap<>();
+//                Map<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> existingLimits = existingMap.get(AnalyzerConstants.ResourceSetting.limits);
+//
+//                for (Map.Entry<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> limitsMapEntry : existingLimits.entrySet()) {
+//                    AnalyzerConstants.RecommendationItem recommendationItem = limitsMapEntry.getKey();
+//                    RecommendationConfigItem recommendationConfigItem = limitsMapEntry.getValue();
+//
+//                    if (recommendationItem == AnalyzerConstants.RecommendationItem.CPU) {
+//                        updatedLimits.put(recommendationItem, CommonUtils.formatCpuUnits(recommendationConfigItem));
+//                    } else if (recommendationItem == AnalyzerConstants.RecommendationItem.MEMORY) {
+//                        updatedLimits.put(recommendationItem, CommonUtils.formatMemoryUnits(recommendationConfigItem));
+//                    } else {
+//                        updatedLimits.put(recommendationItem, CommonUtils.formatAcceleratorUnits(recommendationConfigItem));
+//                    }
+//                }
+//
+//                if (!updatedRequests.isEmpty())
+//                    updatedRec.put(AnalyzerConstants.ResourceSetting.requests, updatedRequests);
+//
+//                if (!updatedLimits.isEmpty())
+//                    updatedRec.put(AnalyzerConstants.ResourceSetting.limits, updatedLimits);
+//
+//                System.out.println("Calling updater");
+//                updateOrRevertResources(containerName, namespace, workloadName, "job",
+//                        updatedRec);
 
-                Map<Timestamp, MappedRecommendationForTimestamp> timestampMap = containerData.getContainerRecommendations().getData();
-                if (null == timestampMap || timestampMap.isEmpty()) {
-                    System.out.println("Timestamp map is empty");
-                    continue;
-                }
-
-
-                Map.Entry<Timestamp, MappedRecommendationForTimestamp> latestEntry = null;
-                for (Map.Entry<Timestamp, MappedRecommendationForTimestamp> timestampEntry : timestampMap.entrySet()) {
-                    if (latestEntry == null || timestampEntry.getKey().after(latestEntry.getKey()))
-                        latestEntry = timestampEntry;
-                }
-
-                MappedRecommendationForTimestamp latestRecommendation = latestEntry.getValue();
-                if (null == latestRecommendation) {
-                    System.out.println("latest recommendation is null");
-                    continue;
-                }
-
-
-                TermRecommendations shortTermRec = latestRecommendation.getShortTermRecommendations();
+                // Dummy recommendations to apply
+                HashMap<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> dummyReq = new HashMap<>();
+                HashMap<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> dummyLim = new HashMap<>();
                 HashMap<AnalyzerConstants.ResourceSetting,
-                        HashMap<AnalyzerConstants.RecommendationItem, RecommendationConfigItem>> existingMap =
-                        shortTermRec.getCostRecommendations().getConfig();
+                        HashMap<AnalyzerConstants.RecommendationItem, RecommendationConfigItem>> dummyRec = new HashMap<>();
 
-                HashMap<AnalyzerConstants.ResourceSetting,
-                        HashMap<AnalyzerConstants.RecommendationItem, RecommendationConfigItem>> updatedRec = new HashMap<>();
+                dummyReq.put(AnalyzerConstants.RecommendationItem.CPU, new RecommendationConfigItem(1500.0, "m"));
+                dummyReq.put(AnalyzerConstants.RecommendationItem.MEMORY, new RecommendationConfigItem(512.0, "Mi"));
 
-                // Process requests
-                HashMap<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> updatedRequests = new HashMap<>();
-                Map<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> existingRequests = existingMap.get(AnalyzerConstants.ResourceSetting.requests);
+                dummyLim.put(AnalyzerConstants.RecommendationItem.CPU, new RecommendationConfigItem(1500.0, "m"));
+                dummyLim.put(AnalyzerConstants.RecommendationItem.MEMORY, new RecommendationConfigItem(512.0, "Mi"));
+                dummyLim.put(AnalyzerConstants.RecommendationItem.NVIDIA_GPU_PARTITION_3_CORES_20GB, new RecommendationConfigItem(1.0, ""));
 
-                for (Map.Entry<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> requestMapEntry : existingRequests.entrySet()) {
-                    AnalyzerConstants.RecommendationItem recommendationItem = requestMapEntry.getKey();
-                    RecommendationConfigItem recommendationConfigItem = requestMapEntry.getValue();
+                dummyRec.put(AnalyzerConstants.ResourceSetting.requests, dummyReq);
+                dummyRec.put(AnalyzerConstants.ResourceSetting.limits, dummyLim);
 
-                    if (recommendationItem == AnalyzerConstants.RecommendationItem.CPU) {
-                        updatedRequests.put(recommendationItem, CommonUtils.formatCpuUnits(recommendationConfigItem));
-                    } else if (recommendationItem == AnalyzerConstants.RecommendationItem.MEMORY) {
-                        updatedRequests.put(recommendationItem, CommonUtils.formatMemoryUnits(recommendationConfigItem));
-                    } else {
-                        updatedRequests.put(recommendationItem, CommonUtils.formatAcceleratorUnits(recommendationConfigItem));
-                    }
-                }
-
-                HashMap<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> updatedLimits = new HashMap<>();
-                Map<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> existingLimits = existingMap.get(AnalyzerConstants.ResourceSetting.limits);
-
-                for (Map.Entry<AnalyzerConstants.RecommendationItem, RecommendationConfigItem> limitsMapEntry : existingLimits.entrySet()) {
-                    AnalyzerConstants.RecommendationItem recommendationItem = limitsMapEntry.getKey();
-                    RecommendationConfigItem recommendationConfigItem = limitsMapEntry.getValue();
-
-                    if (recommendationItem == AnalyzerConstants.RecommendationItem.CPU) {
-                        updatedLimits.put(recommendationItem, CommonUtils.formatCpuUnits(recommendationConfigItem));
-                    } else if (recommendationItem == AnalyzerConstants.RecommendationItem.MEMORY) {
-                        updatedLimits.put(recommendationItem, CommonUtils.formatMemoryUnits(recommendationConfigItem));
-                    } else {
-                        updatedLimits.put(recommendationItem, CommonUtils.formatAcceleratorUnits(recommendationConfigItem));
-                    }
-                }
-
-                if (!updatedRequests.isEmpty())
-                    updatedRec.put(AnalyzerConstants.ResourceSetting.requests, updatedRequests);
-
-                if (!updatedLimits.isEmpty())
-                    updatedRec.put(AnalyzerConstants.ResourceSetting.limits, updatedLimits);
-
-                System.out.println("Calling updater");
-                updateOrRevertResources(containerName, namespace, workloadName, "job",
-                        updatedRec);
+                updateOrRevertResources(containerName, namespace, workloadName,  "job", dummyRec);
             }
         } catch (Exception e) {
             e.printStackTrace();
