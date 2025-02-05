@@ -689,7 +689,7 @@ public class AnalyzerConstants {
 
         }
 
-        public static final int DEFAULT_SLEEP_INTERVAL = 60;
+        public static final int DEFAULT_SLEEP_INTERVAL = 60 * 10;
         public static final int DEFAULT_INITIAL_DELAY = 30;
         public static final class SupportedUpdaters {
             public static final String VPA = "vpa";
