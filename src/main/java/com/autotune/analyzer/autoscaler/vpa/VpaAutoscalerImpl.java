@@ -24,6 +24,8 @@ import com.autotune.analyzer.exceptions.UnableToCreateVPAException;
 import com.autotune.analyzer.kruizeObject.KruizeObject;
 import com.autotune.analyzer.recommendations.RecommendationConfigItem;
 import com.autotune.analyzer.autoscaler.AutoscalerImpl;
+import com.autotune.analyzer.recommendations.RecommendationConstants;
+import com.autotune.analyzer.recommendations.RecommendationNotification;
 import com.autotune.analyzer.recommendations.term.Terms;
 import com.autotune.analyzer.recommendations.utils.RecommendationUtils;
 import com.autotune.analyzer.utils.AnalyzerConstants;
@@ -33,6 +35,7 @@ import com.autotune.common.k8sObjects.K8sObject;
 import com.autotune.common.data.result.ContainerData;
 import com.autotune.analyzer.recommendations.objects.MappedRecommendationForTimestamp;
 import com.autotune.analyzer.recommendations.objects.TermRecommendations;
+import com.autotune.database.service.ExperimentDBService;
 import com.autotune.utils.KruizeConstants;
 import io.fabric8.autoscaling.api.model.v1.*;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
@@ -44,14 +47,17 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.ApiextensionsAPIGroupDSL;
 import io.fabric8.verticalpodautoscaler.client.DefaultVerticalPodAutoscalerClient;
 import io.fabric8.verticalpodautoscaler.client.NamespacedVerticalPodAutoscalerClient;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.http.HttpServletResponse;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class VpaAutoscalerImpl extends AutoscalerImpl {
     private static final Logger LOGGER = LoggerFactory.getLogger(VpaAutoscalerImpl.class);
@@ -243,6 +249,7 @@ public class VpaAutoscalerImpl extends AutoscalerImpl {
             throws InvalidTermException, InvalidModelException, ApplyRecommendationsError {
 
         List<RecommendedContainerResources> containerRecommendations = new ArrayList<>();
+        boolean updateDB = false;
 
         for (Map.Entry<String, ContainerData> containerDataEntry : containerDataMap.entrySet()) {
             // fetching container data
@@ -255,7 +262,15 @@ public class VpaAutoscalerImpl extends AutoscalerImpl {
             if (null == recommendationData) {
                 LOGGER.error(AnalyzerErrorConstants.AutoscalerErrors.RECOMMENDATION_DATA_NOT_PRESENT);
             } else {
-                for (MappedRecommendationForTimestamp value : recommendationData.values()) {
+                Map.Entry<Timestamp, MappedRecommendationForTimestamp> latestEntry = recommendationData.entrySet()
+                        .stream()
+                        .max(Map.Entry.comparingByKey())
+                        .orElse(null);
+
+                if (latestEntry != null) {
+                    Timestamp latestTimestamp = latestEntry.getKey();
+                    MappedRecommendationForTimestamp value = latestEntry.getValue();
+
                     /*
                      * The short-term performance recommendations is currently the default for VPA and is hardcoded.
                      * TODO:// Implement functionality to choose the desired term and model
@@ -278,10 +293,14 @@ public class VpaAutoscalerImpl extends AutoscalerImpl {
                     String user_model = kruizeObject.getRecommendation_settings().getModelSettings().getModels().get(0);
                     HashMap<AnalyzerConstants.ResourceSetting, HashMap<AnalyzerConstants.RecommendationItem, RecommendationConfigItem>> recommendationsConfig;
 
+                    HashMap<Integer, RecommendationNotification> notificationHashMap;
+
                     if (KruizeConstants.JSONKeys.COST.equalsIgnoreCase(user_model)) {
                         recommendationsConfig = termRecommendations.getCostRecommendations().getConfig();
+                        notificationHashMap = termRecommendations.getCostRecommendations().getNotificationHashMap();
                     } else if (KruizeConstants.JSONKeys.PERFORMANCE.equalsIgnoreCase(user_model)) {
                         recommendationsConfig = termRecommendations.getPerformanceRecommendations().getConfig();
+                        notificationHashMap = termRecommendations.getPerformanceRecommendations().getNotificationHashMap();
                     } else {
                         throw new IllegalArgumentException("Unknown model: "+ user_model);
                     }
@@ -309,8 +328,17 @@ public class VpaAutoscalerImpl extends AutoscalerImpl {
 
                     if (!validationOutputData.isSuccess()) {
                         // TODO: store this event in the database to notify the user later
+                        if (!notificationHashMap.containsKey(RecommendationConstants.NotificationCodes.ERROR_VPA_RECOMMENDATION_INVALID_RESOURCES)) {
+                            updateDB = true;
+                            notificationHashMap.put(RecommendationConstants.NotificationCodes.ERROR_VPA_RECOMMENDATION_INVALID_RESOURCES,
+                                    new RecommendationNotification(RecommendationConstants.RecommendationNotification.ERROR_VPA_RECOMMENDATION_INVALID_RESOURCES));
+                        }
                         LOGGER.error(validationOutputData.getMessage());
                     } else {
+                        if (notificationHashMap.containsKey(RecommendationConstants.NotificationCodes.ERROR_VPA_RECOMMENDATION_INVALID_RESOURCES)) {
+                            updateDB = true;
+                            notificationHashMap.remove(RecommendationConstants.NotificationCodes.ERROR_VPA_RECOMMENDATION_INVALID_RESOURCES);
+                        }
                         // creating container resource vpa object
                         RecommendedContainerResources recommendedContainerResources = new RecommendedContainerResources();
                         recommendedContainerResources.setContainerName(containerName);
@@ -336,10 +364,37 @@ public class VpaAutoscalerImpl extends AutoscalerImpl {
 
                         containerRecommendations.add(recommendedContainerResources);
                     }
+
+                    if (updateDB){
+                        Map<String, KruizeObject> mainKruizeExperimentMAP = new ConcurrentHashMap<>();
+                        mainKruizeExperimentMAP.put(kruizeObject.getExperimentName(), kruizeObject);
+                        ValidationOutputData vodForNotificationUpdate = updateRecommendationsNotificationsToDB(
+                                mainKruizeExperimentMAP, kruizeObject, latestTimestamp);
+                        if (!vodForNotificationUpdate.isSuccess()) {
+                            LOGGER.error(String.format(AnalyzerErrorConstants.APIErrors.UpdateRecommendationsAPI.UPDATE_RECOMMENDATIONS_FAILED_COUNT, 1));
+                        } else {
+                            LOGGER.debug(String.format(AnalyzerErrorConstants.APIErrors.UpdateRecommendationsAPI.UPDATE_RECOMMENDATIONS_SUCCESS_COUNT, 1));
+                        }
+                    }
                 }
             }
         }
+
+
         return containerRecommendations;
+    }
+
+    private ValidationOutputData updateRecommendationsNotificationsToDB(Map<String, KruizeObject> mainKruizeExperimentMAP, KruizeObject kruizeObject, Timestamp timestamp) {
+        ValidationOutputData validationOutputData;
+        try {
+            validationOutputData = new ExperimentDBService().addRecommendationToDB(mainKruizeExperimentMAP, kruizeObject, timestamp);
+        } catch (Exception e) {
+            LOGGER.error(RecommendationConstants.RecommendationNotificationMsgConstant.ADDING_RECOMMENDATIONS_TO_DB_FAILED
+                    .concat(AnalyzerErrorConstants.AutotuneObjectErrors.EXPERIMENT_AND_INTERVAL_END_TIME)
+                    .concat(" : " + e.getMessage()));
+            validationOutputData = new ValidationOutputData(false, e.getMessage(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+        return validationOutputData;
     }
 
     /*

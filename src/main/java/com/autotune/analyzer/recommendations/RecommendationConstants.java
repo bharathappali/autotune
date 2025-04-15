@@ -193,6 +193,11 @@ public class RecommendationConstants {
                 RecommendationConstants.RecommendationNotificationMsgConstant.HOURS_CANNOT_BE_NEGATIVE,
                 RecommendationConstants.RecommendationNotificationTypes.ERROR
         ),
+        ERROR_VPA_RECOMMENDATION_INVALID_RESOURCES(
+                NotificationCodes.ERROR_VPA_RECOMMENDATION_INVALID_RESOURCES,
+                RecommendationNotificationMsgConstant.VPA_RECOMMENDATION_INVALID_RESOURCES,
+                RecommendationNotificationTypes.ERROR
+        ),
         NOTICE_CPU_RECORDS_ARE_IDLE(
                 RecommendationConstants.NotificationCodes.NOTICE_CPU_RECORDS_ARE_IDLE,
                 RecommendationConstants.RecommendationNotificationMsgConstant.CPU_RECORDS_ARE_IDLE,
@@ -385,6 +390,11 @@ public class RecommendationConstants {
         public static final int SECTION_ERROR_SUBSECTION_DATA_SUBSYSTEM_DISK_END = 226999;
         public static final int SECTION_ERROR_SUBSECTION_DATA_SUBSYSTEM_POWER_START = 227000;
         public static final int SECTION_ERROR_SUBSECTION_DATA_SUBSYSTEM_POWER_END = 227999;
+        public static final int SECTION_ERROR_SUBSECTION_VPA_START = 230000;
+        public static final int SECTION_ERROR_SUBSECTION_VPA_END = 239999;
+        public static final int SECTION_ERROR_SUBSECTION_VPA_SUBSYSTEM_FAILURES_START = 231000;
+        public static final int ERROR_VPA_RECOMMENDATION_INVALID_RESOURCES = 231001;
+        public static final int SECTION_ERROR_SUBSECTION_VPA_SUBSYSTEM_FAILURES_END = 231999;
         public static final int SECTION_NOTICE_START = 300000;
 
         // Section - Notice:                300000 - 399999
@@ -671,6 +681,7 @@ public class RecommendationConstants {
         public static final String MEMORY_REQUESTS_OPTIMISED = "Workload is optimised wrt MEMORY REQUESTS, no changes needed";
         public static final String MEMORY_LIMITS_OPTIMISED = "Workload is optimised wrt MEMORY LIMITS, no changes needed";
         public static final String ADDING_RECOMMENDATIONS_TO_DB_FAILED = "Failed to add recommendations to the DB ";
+        public static final String VPA_RECOMMENDATION_INVALID_RESOURCES = "Invalid Resources for VPA to apply";
 
         private RecommendationNotificationMsgConstant() {
 
