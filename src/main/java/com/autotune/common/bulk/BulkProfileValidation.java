@@ -47,13 +47,13 @@ public class BulkProfileValidation {
         "performance", "cost"
     ));
     
-    private static final Set<String> VALID_SCHEDULING_UNITS = new HashSet<>(Arrays.asList(
-        "m", "h", "d"  // minutes, hours, days
-    ));
-    
     private static final Set<String> VALID_EXPERIMENT_TYPES = new HashSet<>(Arrays.asList(
         "container", "namespace"
     ));
+    
+    // Regex pattern for scheduling format: number + unit (e.g., "24h", "30min", "7days")
+    // Supports: h, hr, hrs, hour, hours, m, min, mins, minute, minutes, d, day, days
+    private static final String SCHEDULING_PATTERN = "^\\d+\\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes|d|day|days)$";
 
     /**
      * Validate a bulk profile for creation
@@ -285,23 +285,20 @@ public class BulkProfileValidation {
 
     /**
      * Validate scheduling configuration
+     * Accepts formats like: "24h", "30min", "7days", "1hr", etc.
      */
-    private static ValidationOutputData validateScheduling(BulkProfile.Scheduling scheduling) {
-        if (scheduling.getValue() <= 0) {
-            return new ValidationOutputData(false, 
-                "scheduling value must be greater than 0", 
+    private static ValidationOutputData validateScheduling(String scheduling) {
+        if (scheduling == null || scheduling.trim().isEmpty()) {
+            return new ValidationOutputData(false,
+                "scheduling is required",
                 HttpServletResponse.SC_BAD_REQUEST);
         }
         
-        if (scheduling.getUnit() == null || scheduling.getUnit().trim().isEmpty()) {
-            return new ValidationOutputData(false, 
-                "scheduling unit is required", 
-                HttpServletResponse.SC_BAD_REQUEST);
-        }
-        
-        if (!VALID_SCHEDULING_UNITS.contains(scheduling.getUnit())) {
-            return new ValidationOutputData(false, 
-                "Invalid scheduling unit: " + scheduling.getUnit() + ". Valid values are: " + VALID_SCHEDULING_UNITS, 
+        if (!scheduling.matches(SCHEDULING_PATTERN)) {
+            return new ValidationOutputData(false,
+                "Invalid scheduling format: " + scheduling +
+                ". Expected format: number + unit (e.g., '24h', '30min', '7days'). " +
+                "Valid units: h/hr/hrs/hour/hours, m/min/mins/minute/minutes, d/day/days",
                 HttpServletResponse.SC_BAD_REQUEST);
         }
         

@@ -190,7 +190,7 @@ public class BulkProfile {
      */
     public static class RecommendationSettings {
         
-        private Scheduling scheduling;
+        private String scheduling;
         
         private List<String> terms = new ArrayList<>();
         
@@ -202,18 +202,18 @@ public class BulkProfile {
         public RecommendationSettings() {
         }
 
-        public RecommendationSettings(Scheduling scheduling, List<String> terms, List<String> models, String measurementDuration) {
+        public RecommendationSettings(String scheduling, List<String> terms, List<String> models, String measurementDuration) {
             this.scheduling = scheduling;
             this.terms = terms;
             this.models = models;
             this.measurementDuration = measurementDuration;
         }
 
-        public Scheduling getScheduling() {
+        public String getScheduling() {
             return scheduling;
         }
 
-        public void setScheduling(Scheduling scheduling) {
+        public void setScheduling(String scheduling) {
             this.scheduling = scheduling;
         }
 
@@ -239,40 +239,6 @@ public class BulkProfile {
 
         public void setMeasurementDuration(String measurementDuration) {
             this.measurementDuration = measurementDuration;
-        }
-    }
-
-    /**
-     * Scheduling configuration for automated recommendation generation
-     */
-    public static class Scheduling {
-        
-        private int value;
-        
-        private String unit;
-
-        public Scheduling() {
-        }
-
-        public Scheduling(int value, String unit) {
-            this.value = value;
-            this.unit = unit;
-        }
-
-        public int getValue() {
-            return value;
-        }
-
-        public void setValue(int value) {
-            this.value = value;
-        }
-
-        public String getUnit() {
-            return unit;
-        }
-
-        public void setUnit(String unit) {
-            this.unit = unit;
         }
     }
 }
