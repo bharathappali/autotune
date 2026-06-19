@@ -116,15 +116,24 @@ public class BulkProfile {
         private List<String> namespaces = new ArrayList<>();
         
         private Map<String, String> labels = new HashMap<>();
+        
+        @JsonProperty("experiment_types")
+        private List<String> experimentTypes = new ArrayList<>();
+        
+        @JsonProperty("metadata_profile")
+        private String metadataProfile;
 
         public Cluster() {
         }
 
-        public Cluster(String clusterName, List<String> datasources, List<String> namespaces, Map<String, String> labels) {
+        public Cluster(String clusterName, List<String> datasources, List<String> namespaces,
+                       Map<String, String> labels, List<String> experimentTypes, String metadataProfile) {
             this.clusterName = clusterName;
             this.datasources = datasources;
             this.namespaces = namespaces;
             this.labels = labels;
+            this.experimentTypes = experimentTypes;
+            this.metadataProfile = metadataProfile;
         }
 
         public String getClusterName() {
@@ -158,6 +167,22 @@ public class BulkProfile {
         public void setLabels(Map<String, String> labels) {
             this.labels = labels;
         }
+
+        public List<String> getExperimentTypes() {
+            return experimentTypes;
+        }
+
+        public void setExperimentTypes(List<String> experimentTypes) {
+            this.experimentTypes = experimentTypes;
+        }
+
+        public String getMetadataProfile() {
+            return metadataProfile;
+        }
+
+        public void setMetadataProfile(String metadataProfile) {
+            this.metadataProfile = metadataProfile;
+        }
     }
 
     /**
@@ -170,14 +195,18 @@ public class BulkProfile {
         private List<String> terms = new ArrayList<>();
         
         private List<String> models = new ArrayList<>();
+        
+        @JsonProperty("measurement_duration")
+        private String measurementDuration;
 
         public RecommendationSettings() {
         }
 
-        public RecommendationSettings(Scheduling scheduling, List<String> terms, List<String> models) {
+        public RecommendationSettings(Scheduling scheduling, List<String> terms, List<String> models, String measurementDuration) {
             this.scheduling = scheduling;
             this.terms = terms;
             this.models = models;
+            this.measurementDuration = measurementDuration;
         }
 
         public Scheduling getScheduling() {
@@ -202,6 +231,14 @@ public class BulkProfile {
 
         public void setModels(List<String> models) {
             this.models = models;
+        }
+
+        public String getMeasurementDuration() {
+            return measurementDuration;
+        }
+
+        public void setMeasurementDuration(String measurementDuration) {
+            this.measurementDuration = measurementDuration;
         }
     }
 

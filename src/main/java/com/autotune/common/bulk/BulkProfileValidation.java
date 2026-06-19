@@ -50,6 +50,10 @@ public class BulkProfileValidation {
     private static final Set<String> VALID_SCHEDULING_UNITS = new HashSet<>(Arrays.asList(
         "m", "h", "d"  // minutes, hours, days
     ));
+    
+    private static final Set<String> VALID_EXPERIMENT_TYPES = new HashSet<>(Arrays.asList(
+        "container", "namespace"
+    ));
 
     /**
      * Validate a bulk profile for creation
@@ -185,8 +189,8 @@ public class BulkProfileValidation {
             if (cluster.getNamespaces() != null) {
                 for (String namespace : cluster.getNamespaces()) {
                     if (namespace == null || namespace.trim().isEmpty()) {
-                        return new ValidationOutputData(false, 
-                            "Empty namespace not allowed in cluster: " + cluster.getClusterName(), 
+                        return new ValidationOutputData(false,
+                            "Empty namespace not allowed in cluster: " + cluster.getClusterName(),
                             HttpServletResponse.SC_BAD_REQUEST);
                     }
                 }
@@ -196,11 +200,34 @@ public class BulkProfileValidation {
             if (cluster.getLabels() != null) {
                 for (String key : cluster.getLabels().keySet()) {
                     if (key == null || key.trim().isEmpty()) {
-                        return new ValidationOutputData(false, 
-                            "Empty label key not allowed in cluster: " + cluster.getClusterName(), 
+                        return new ValidationOutputData(false,
+                            "Empty label key not allowed in cluster: " + cluster.getClusterName(),
                             HttpServletResponse.SC_BAD_REQUEST);
                     }
                 }
+            }
+            
+            // Validate experiment_types
+            if (cluster.getExperimentTypes() == null || cluster.getExperimentTypes().isEmpty()) {
+                return new ValidationOutputData(false,
+                    "At least one experiment_type is required for cluster: " + cluster.getClusterName(),
+                    HttpServletResponse.SC_BAD_REQUEST);
+            }
+            
+            for (String expType : cluster.getExperimentTypes()) {
+                if (!VALID_EXPERIMENT_TYPES.contains(expType)) {
+                    return new ValidationOutputData(false,
+                        "Invalid experiment_type: " + expType + " in cluster: " + cluster.getClusterName() +
+                        ". Valid values are: " + VALID_EXPERIMENT_TYPES,
+                        HttpServletResponse.SC_BAD_REQUEST);
+                }
+            }
+            
+            // Validate metadata_profile
+            if (cluster.getMetadataProfile() == null || cluster.getMetadataProfile().trim().isEmpty()) {
+                return new ValidationOutputData(false,
+                    "metadata_profile is required for cluster: " + cluster.getClusterName(),
+                    HttpServletResponse.SC_BAD_REQUEST);
             }
         }
         
