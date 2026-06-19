@@ -17,6 +17,7 @@ package com.autotune.analyzer.serviceObjects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,10 +38,16 @@ public class BulkProfile {
     @JsonProperty("recommendation_settings")
     private RecommendationSettings recommendationSettings;
     
-    private boolean enabled = true;
+    private Boolean enabled = true;
     
     @JsonProperty("webhook_url")
     private String webhookUrl;
+    
+    @JsonProperty("created_at")
+    private Instant createdAt;
+    
+    @JsonProperty("updated_at")
+    private Instant updatedAt;
 
     public BulkProfile() {
     }
@@ -87,11 +94,11 @@ public class BulkProfile {
         this.recommendationSettings = recommendationSettings;
     }
 
-    public boolean isEnabled() {
+    public Boolean getEnabled() {
         return enabled;
     }
 
-    public void setEnabled(boolean enabled) {
+    public void setEnabled(Boolean enabled) {
         this.enabled = enabled;
     }
 
@@ -101,6 +108,22 @@ public class BulkProfile {
 
     public void setWebhookUrl(String webhookUrl) {
         this.webhookUrl = webhookUrl;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     /**

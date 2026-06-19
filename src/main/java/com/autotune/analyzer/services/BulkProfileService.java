@@ -193,7 +193,6 @@ public class BulkProfileService extends HttpServlet {
 
             // Convert back to database entity and update
             KruizeBulkProfileEntry updatedEntry = KruizeBulkProfileEntry.fromBulkProfile(existingProfile);
-            updatedEntry.setId(existingEntry.getId()); // Preserve the ID
             
             ValidationOutputData updateResult = experimentDAO.updateBulkProfileToDB(updatedEntry);
             if (!updateResult.isSuccess()) {
@@ -306,14 +305,20 @@ public class BulkProfileService extends HttpServlet {
 
             LOGGER.info("Triggering webhook for profile: {} to URL: {}", profile.getProfileName(), webhookUrl);
 
-            GenericRestApiClient client = new GenericRestApiClient(webhookUrl);
-            String response = client.callApi(payload, "POST");
+            GenericRestApiClient client = new GenericRestApiClient();
+            client.setBaseURL(webhookUrl);
+            GenericRestApiClient.HttpResponseWrapper response = client.callKruizeAPI(payload);
 
-            LOGGER.info("Webhook triggered successfully for profile: {}, response: {}", 
-                profile.getProfileName(), response);
+            if (response != null && response.getStatusCode() == HttpServletResponse.SC_OK) {
+                LOGGER.info("Webhook triggered successfully for profile: {}, status: {}",
+                    profile.getProfileName(), response.getStatusCode());
+            } else {
+                LOGGER.warn("Webhook returned non-OK status for profile: {}, status: {}",
+                    profile.getProfileName(), response != null ? response.getStatusCode() : "null");
+            }
 
         } catch (Exception e) {
-            LOGGER.error("Failed to trigger webhook for profile: {}, error: {}", 
+            LOGGER.error("Failed to trigger webhook for profile: {}, error: {}",
                 profile.getProfileName(), e.getMessage(), e);
             // Don't fail the update if webhook fails - just log the error
         }

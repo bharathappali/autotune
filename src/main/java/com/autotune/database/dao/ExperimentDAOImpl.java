@@ -2056,6 +2056,7 @@ public class ExperimentDAOImpl implements ExperimentDAO {
             return true;
         }
         return false;
+    }
 
     /**
      * Adds BulkProfile to database
@@ -2074,10 +2075,10 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 tx.commit();
                 validationOutputData.setSuccess(true);
             } catch (ConstraintViolationException e) {
-                LOGGER.error("Bulk profile with name {} already exists", kruizeBulkProfileEntry.getProfile_name());
+                LOGGER.error("Bulk profile with name {} already exists", kruizeBulkProfileEntry.getProfileName());
                 if (tx != null) tx.rollback();
                 validationOutputData.setSuccess(false);
-                validationOutputData.setMessage("Bulk profile with name " + kruizeBulkProfileEntry.getProfile_name() + " already exists");
+                validationOutputData.setMessage("Bulk profile with name " + kruizeBulkProfileEntry.getProfileName() + " already exists");
                 validationOutputData.setErrorCode(HttpServletResponse.SC_CONFLICT);
             } catch (HibernateException e) {
                 LOGGER.error("Not able to save bulk profile due to {}", e.getMessage());
@@ -2108,8 +2109,7 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 tx = session.beginTransaction();
                 Query<KruizeBulkProfileEntry> query = session.createQuery(
                     "FROM KruizeBulkProfileEntry WHERE profile_name = :profileName",
-                    KruizeBulkProfileEntry.class
-                );
+                    KruizeBulkProfileEntry.class);
                 query.setParameter("profileName", profileName);
                 kruizeBulkProfileEntry = query.uniqueResult();
                 tx.commit();
@@ -2142,8 +2142,7 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 tx = session.beginTransaction();
                 Query<KruizeBulkProfileEntry> query = session.createQuery(
                     "FROM KruizeBulkProfileEntry ORDER BY profile_name",
-                    KruizeBulkProfileEntry.class
-                );
+                    KruizeBulkProfileEntry.class);
                 bulkProfiles = query.list();
                 tx.commit();
             } catch (HibernateException e) {
@@ -2202,8 +2201,7 @@ public class ExperimentDAOImpl implements ExperimentDAO {
             try {
                 tx = session.beginTransaction();
                 Query query = session.createQuery(
-                    "DELETE FROM KruizeBulkProfileEntry WHERE profile_name = :profileName"
-                );
+                    "DELETE FROM KruizeBulkProfileEntry WHERE profile_name = :profileName", null);
                 query.setParameter("profileName", profileName);
                 int result = query.executeUpdate();
                 tx.commit();
@@ -2243,8 +2241,7 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 tx = session.beginTransaction();
                 Query<KruizeBulkProfileEntry> query = session.createQuery(
                     "FROM KruizeBulkProfileEntry WHERE enabled = true ORDER BY profile_name",
-                    KruizeBulkProfileEntry.class
-                );
+                    KruizeBulkProfileEntry.class);
                 bulkProfiles = query.list();
                 tx.commit();
             } catch (HibernateException e) {
@@ -2257,6 +2254,5 @@ public class ExperimentDAOImpl implements ExperimentDAO {
             throw new Exception("Error loading enabled bulk profiles: " + e.getMessage());
         }
         return bulkProfiles;
-    }
     }
 }
