@@ -2108,7 +2108,7 @@ public class ExperimentDAOImpl implements ExperimentDAO {
             try {
                 tx = session.beginTransaction();
                 Query<KruizeBulkProfileEntry> query = session.createQuery(
-                    "FROM KruizeBulkProfileEntry WHERE profile_name = :profileName",
+                    DBConstants.SQLQUERY.SELECT_FROM_BULK_PROFILE_BY_NAME,
                     KruizeBulkProfileEntry.class);
                 query.setParameter("profileName", profileName);
                 kruizeBulkProfileEntry = query.uniqueResult();
@@ -2141,7 +2141,7 @@ public class ExperimentDAOImpl implements ExperimentDAO {
             try {
                 tx = session.beginTransaction();
                 Query<KruizeBulkProfileEntry> query = session.createQuery(
-                    "FROM KruizeBulkProfileEntry ORDER BY profile_name",
+                    DBConstants.SQLQUERY.SELECT_FROM_BULK_PROFILE + " k ORDER BY k.profileName",
                     KruizeBulkProfileEntry.class);
                 bulkProfiles = query.list();
                 tx.commit();

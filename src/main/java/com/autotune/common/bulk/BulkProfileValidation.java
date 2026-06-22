@@ -19,7 +19,10 @@ import com.autotune.analyzer.serviceObjects.BulkProfile;
 import com.autotune.analyzer.serviceObjects.BulkProfileUpdateRequest;
 import com.autotune.common.data.ValidationOutputData;
 import com.autotune.common.datasource.DataSourceInfo;
+import com.autotune.common.datasource.DataSourceOperatorImpl;
+import com.autotune.common.utils.CommonUtils;
 import com.autotune.database.service.ExperimentDBService;
+import com.autotune.utils.KruizeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -163,25 +166,16 @@ public class BulkProfileValidation {
             
             // Validate datasources
             if (cluster.getDatasources() == null || cluster.getDatasources().isEmpty()) {
-                return new ValidationOutputData(false, 
-                    "At least one datasource is required for cluster: " + cluster.getClusterName(), 
+                return new ValidationOutputData(false,
+                    "At least one datasource is required for cluster: " + cluster.getClusterName(),
                     HttpServletResponse.SC_BAD_REQUEST);
             }
             
-            // Validate each datasource exists
+            // Validate each datasource connection
             for (String datasourceName : cluster.getDatasources()) {
-                try {
-                    DataSourceInfo dataSourceInfo = new ExperimentDBService().loadDataSourceFromDBByName(datasourceName);
-                    if (dataSourceInfo == null) {
-                        return new ValidationOutputData(false, 
-                            "Datasource not found: " + datasourceName, 
-                            HttpServletResponse.SC_BAD_REQUEST);
-                    }
-                } catch (Exception e) {
-                    LOGGER.error("Error validating datasource: {}", datasourceName, e);
-                    return new ValidationOutputData(false, 
-                        "Error validating datasource: " + datasourceName + " - " + e.getMessage(), 
-                        HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                String errorMessage = validateDatasourceConnection(datasourceName);
+                if (!errorMessage.isEmpty()) {
+                    return new ValidationOutputData(false, errorMessage, HttpServletResponse.SC_BAD_REQUEST);
                 }
             }
             
@@ -324,6 +318,37 @@ public class BulkProfileValidation {
         }
         
         return new ValidationOutputData(true, null, HttpServletResponse.SC_OK);
+    }
+
+    /**
+     * Validate datasource connection and reachability
+     * This method follows the same pattern as BulkServiceValidation.validateDatasourceConnection()
+     *
+     * @param datasourceName The name of the datasource to validate
+     * @return Empty string if valid, error message otherwise
+     */
+    public static String validateDatasourceConnection(String datasourceName) {
+        String errorMessage = "";
+        try {
+            DataSourceInfo dataSourceInfo = null;
+            try {
+                dataSourceInfo = new ExperimentDBService().loadDataSourceFromDBByName(datasourceName);
+            } catch (Exception e) {
+                errorMessage = String.format(KruizeConstants.DataSourceConstants.DataSourceMetadataErrorMsgs.LOAD_DATASOURCE_FROM_DB_ERROR, datasourceName, e.getMessage());
+                LOGGER.error(errorMessage);
+                return errorMessage;
+            }
+            LOGGER.info(KruizeConstants.DataSourceConstants.DataSourceInfoMsgs.VERIFYING_DATASOURCE_REACHABILITY, datasourceName);
+            DataSourceOperatorImpl op = DataSourceOperatorImpl.getInstance().getOperator(KruizeConstants.SupportedDatasources.PROMETHEUS);
+            if (dataSourceInfo == null || op.isServiceable(dataSourceInfo) == CommonUtils.DatasourceReachabilityStatus.NOT_REACHABLE) {
+                errorMessage = KruizeConstants.DataSourceConstants.DataSourceErrorMsgs.DATASOURCE_NOT_SERVICEABLE;
+                LOGGER.error(errorMessage);
+            }
+        } catch (Exception ex) {
+            errorMessage = ex.getMessage();
+            LOGGER.error(errorMessage);
+        }
+        return errorMessage;
     }
 }
 
