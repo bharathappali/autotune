@@ -96,6 +96,8 @@ public class BulkProfileService extends HttpServlet {
         try {
             // Parse request body
             String requestBody = req.getReader().lines().collect(Collectors.joining());
+            LOGGER.info("Received bulk profile creation request: {}", requestBody);
+            
             BulkProfile bulkProfile = objectMapper.readValue(requestBody, BulkProfile.class);
 
             // Validate the profile
@@ -115,18 +117,26 @@ public class BulkProfileService extends HttpServlet {
 
             // Convert to database entity and save
             KruizeBulkProfileEntry profileEntry = KruizeBulkProfileEntry.fromBulkProfile(bulkProfile);
+            LOGGER.info("Saving bulk profile '{}' to database", bulkProfile.getProfileName());
+            
             ValidationOutputData saveResult = experimentDAO.addBulkProfileToDB(profileEntry);
 
             if (!saveResult.isSuccess()) {
-                sendErrorResponse(resp, out, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, 
+                LOGGER.error("Failed to save bulk profile '{}' to database: {}",
+                    bulkProfile.getProfileName(), saveResult.getMessage());
+                sendErrorResponse(resp, out, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     "Failed to create bulk profile: " + saveResult.getMessage());
                 return;
             }
 
+            LOGGER.info("Successfully saved bulk profile '{}' to database", bulkProfile.getProfileName());
+            
             // Return success response
             resp.setStatus(HttpServletResponse.SC_CREATED);
             out.write(objectMapper.writeValueAsString(bulkProfile));
-            LOGGER.info("Created bulk profile: {}", bulkProfile.getProfileName());
+            LOGGER.info("Bulk profile '{}' created successfully with scheduling: {}",
+                bulkProfile.getProfileName(),
+                bulkProfile.getRecommendationSettings().getScheduling());
 
         } catch (Exception e) {
             LOGGER.error("Error creating bulk profile: {}", e.getMessage(), e);
