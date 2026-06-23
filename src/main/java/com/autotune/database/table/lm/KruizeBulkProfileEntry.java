@@ -1,0 +1,150 @@
+/*******************************************************************************
+ * Copyright (c) 2026 Red Hat, IBM Corporation and others.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *******************************************************************************/
+package com.autotune.database.table.lm;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.sql.Timestamp;
+
+/**
+ * Database entity to store Kruize bulk profile configurations.
+ * Bulk profiles define templates for automated bulk job creation with
+ * cluster configurations, recommendation settings, and scheduling.
+ */
+@Entity
+@Table(name = "kruize_bulk_profile")
+public class KruizeBulkProfileEntry {
+    private static final Logger LOGGER = LoggerFactory.getLogger(KruizeBulkProfileEntry.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Id
+    @Column(name = "profile_name", columnDefinition = "VARCHAR(255)")
+    private String profileName;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "clusters", columnDefinition = "jsonb")
+    private JsonNode clusters;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "recommendation_settings", columnDefinition = "jsonb")
+    private JsonNode recommendationSettings;
+
+    @Column(name = "webhook_url", columnDefinition = "VARCHAR(500)")
+    private String webhookUrl;
+
+    @Column(name = "enabled")
+    private Boolean enabled;
+
+    @Column(name = "created_at")
+    private Timestamp createdAt;
+
+    @Column(name = "updated_at")
+    private Timestamp updatedAt;
+
+    // Default constructor
+    public KruizeBulkProfileEntry() {
+    }
+
+    // Constructor with all fields
+    public KruizeBulkProfileEntry(String profileName, JsonNode clusters, JsonNode recommendationSettings,
+                                  String webhookUrl, Boolean enabled, Timestamp createdAt, Timestamp updatedAt) {
+        this.profileName = profileName;
+        this.clusters = clusters;
+        this.recommendationSettings = recommendationSettings;
+        this.webhookUrl = webhookUrl;
+        this.enabled = enabled;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    public String getProfileName() {
+        return profileName;
+    }
+
+    public void setProfileName(String profileName) {
+        this.profileName = profileName;
+    }
+
+    public JsonNode getClusters() {
+        return clusters;
+    }
+
+    public void setClusters(JsonNode clusters) {
+        this.clusters = clusters;
+    }
+
+    public JsonNode getRecommendationSettings() {
+        return recommendationSettings;
+    }
+
+    public void setRecommendationSettings(JsonNode recommendationSettings) {
+        this.recommendationSettings = recommendationSettings;
+    }
+
+    public String getWebhookUrl() {
+        return webhookUrl;
+    }
+
+    public void setWebhookUrl(String webhookUrl) {
+        this.webhookUrl = webhookUrl;
+    }
+
+    public Boolean getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public Timestamp getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Timestamp createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Timestamp getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Timestamp updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    @Override
+    public String toString() {
+        return "KruizeBulkProfileEntry{" +
+                "profileName='" + profileName + '\'' +
+                ", clusters=" + clusters +
+                ", recommendationSettings=" + recommendationSettings +
+                ", webhookUrl='" + webhookUrl + '\'' +
+                ", enabled=" + enabled +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                '}';
+    }
+}
