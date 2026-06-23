@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.autotune.database.table.lm;
 
+import com.autotune.analyzer.serviceObjects.BulkProfile;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Column;
@@ -133,6 +134,84 @@ public class KruizeBulkProfileEntry {
 
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    /**
+     * Convert database entity to service object
+     */
+    public BulkProfile toBulkProfile() {
+        try {
+            BulkProfile profile = new BulkProfile();
+            profile.setProfileName(this.profileName);
+
+            // Convert JsonNode to List<Cluster>
+            if (this.clusters != null) {
+                profile.setClusters(objectMapper.convertValue(
+                        this.clusters,
+                        objectMapper.getTypeFactory().constructCollectionType(
+                                java.util.List.class, BulkProfile.Cluster.class
+                        )
+                ));
+            }
+
+            // Convert JsonNode to RecommendationSettings
+            if (this.recommendationSettings != null) {
+                profile.setRecommendationSettings(objectMapper.convertValue(
+                        this.recommendationSettings,
+                        BulkProfile.RecommendationSettings.class
+                ));
+            }
+
+            profile.setWebhookUrl(this.webhookUrl);
+            profile.setEnabled(this.enabled);
+
+            if (this.createdAt != null) {
+                profile.setCreatedAt(this.createdAt.toInstant());
+            }
+            if (this.updatedAt != null) {
+                profile.setUpdatedAt(this.updatedAt.toInstant());
+            }
+
+            return profile;
+        } catch (Exception e) {
+            LOGGER.error("Error converting KruizeBulkProfileEntry to BulkProfile: {}", e.getMessage());
+            throw new RuntimeException("Failed to convert entity to service object", e);
+        }
+    }
+
+    /**
+     * Create database entity from service object
+     */
+    public static KruizeBulkProfileEntry fromBulkProfile(BulkProfile profile) {
+        try {
+            KruizeBulkProfileEntry entry = new KruizeBulkProfileEntry();
+            entry.setProfileName(profile.getProfileName());
+
+            // Convert List<Cluster> to JsonNode
+            if (profile.getClusters() != null) {
+                entry.setClusters(objectMapper.valueToTree(profile.getClusters()));
+            }
+
+            // Convert RecommendationSettings to JsonNode
+            if (profile.getRecommendationSettings() != null) {
+                entry.setRecommendationSettings(objectMapper.valueToTree(profile.getRecommendationSettings()));
+            }
+
+            entry.setWebhookUrl(profile.getWebhookUrl());
+            entry.setEnabled(profile.getEnabled() != null ? profile.getEnabled() : true);
+
+            if (profile.getCreatedAt() != null) {
+                entry.setCreatedAt(Timestamp.from(profile.getCreatedAt()));
+            }
+            if (profile.getUpdatedAt() != null) {
+                entry.setUpdatedAt(Timestamp.from(profile.getUpdatedAt()));
+            }
+
+            return entry;
+        } catch (Exception e) {
+            LOGGER.error("Error converting BulkProfile to KruizeBulkProfileEntry: {}", e.getMessage());
+            throw new RuntimeException("Failed to convert service object to entity", e);
+        }
     }
 
     @Override
