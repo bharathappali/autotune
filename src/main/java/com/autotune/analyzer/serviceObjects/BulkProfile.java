@@ -79,6 +79,8 @@ public class BulkProfile {
     }
 
     public void setClusters(List<Cluster> clusters) {
+        if (null == clusters)
+            clusters = new ArrayList<>();
         this.clusters = clusters;
     }
 
