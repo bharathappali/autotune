@@ -24,11 +24,7 @@ import com.autotune.common.data.ValidationOutputData;
 import com.autotune.database.helper.DBConstants;
 import com.autotune.database.init.KruizeHibernateUtil;
 import com.autotune.database.table.*;
-import com.autotune.database.table.lm.KruizeBulkJobEntry;
-import com.autotune.database.table.lm.KruizeLMExperimentEntry;
-import com.autotune.database.table.lm.KruizeLMLayerEntry;
-import com.autotune.database.table.lm.KruizeLMMetadataProfileEntry;
-import com.autotune.database.table.lm.KruizeLMRecommendationEntry;
+import com.autotune.database.table.lm.*;
 import com.autotune.utils.KruizeConstants;
 import com.autotune.utils.MetricsConfig;
 import io.micrometer.core.instrument.Timer;
@@ -2055,5 +2051,203 @@ public class ExperimentDAOImpl implements ExperimentDAO {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Adds BulkProfile to database
+     *
+     * @param kruizeBulkProfileEntry Bulk Profile Database object to be added
+     * @return validationOutputData contains the status of the DB insert operation
+     */
+    @Override
+    public ValidationOutputData addBulkProfileToDB(KruizeBulkProfileEntry kruizeBulkProfileEntry) {
+        ValidationOutputData validationOutputData = new ValidationOutputData(false, null, null);
+        Transaction tx = null;
+        try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
+            try {
+                tx = session.beginTransaction();
+                session.persist(kruizeBulkProfileEntry);
+                tx.commit();
+                validationOutputData.setSuccess(true);
+            } catch (ConstraintViolationException e) {
+                LOGGER.error("Bulk profile with name {} already exists", kruizeBulkProfileEntry.getProfileName());
+                if (tx != null) tx.rollback();
+                validationOutputData.setSuccess(false);
+                validationOutputData.setMessage("Bulk profile with name " + kruizeBulkProfileEntry.getProfileName() + " already exists");
+                validationOutputData.setErrorCode(HttpServletResponse.SC_CONFLICT);
+            } catch (HibernateException e) {
+                LOGGER.error("Not able to save bulk profile due to {}", e.getMessage());
+                if (tx != null) tx.rollback();
+                e.printStackTrace();
+                validationOutputData.setSuccess(false);
+                validationOutputData.setMessage(e.getMessage());
+            }
+        } catch (Exception e) {
+            LOGGER.error("Not able to save bulk profile due to {}", e.getMessage());
+            validationOutputData.setMessage(e.getMessage());
+        }
+        return validationOutputData;
+    }
+
+    /**
+     * Load a single bulk profile by name
+     *
+     * @param profileName Name of the bulk profile to load
+     * @return KruizeBulkProfileEntry or null if not found
+     */
+    @Override
+    public KruizeBulkProfileEntry loadBulkProfileByName(String profileName) throws Exception {
+        KruizeBulkProfileEntry kruizeBulkProfileEntry = null;
+        Transaction tx = null;
+        try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
+            try {
+                tx = session.beginTransaction();
+                Query<KruizeBulkProfileEntry> query = session.createQuery(
+                        DBConstants.SQLQUERY.SELECT_FROM_BULK_PROFILE_BY_NAME,
+                        KruizeBulkProfileEntry.class);
+                query.setParameter("profileName", profileName);
+                kruizeBulkProfileEntry = query.uniqueResult();
+                tx.commit();
+            } catch (NoResultException e) {
+                LOGGER.debug("Bulk profile {} not found", profileName);
+                if (tx != null) tx.rollback();
+            } catch (HibernateException e) {
+                LOGGER.error("Error loading bulk profile: {}", e.getMessage());
+                if (tx != null) tx.rollback();
+                throw new Exception("Error loading bulk profile: " + e.getMessage());
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error loading bulk profile: {}", e.getMessage());
+            throw new Exception("Error loading bulk profile: " + e.getMessage());
+        }
+        return kruizeBulkProfileEntry;
+    }
+
+    /**
+     * Load all bulk profiles
+     *
+     * @return List of all bulk profiles
+     */
+    @Override
+    public List<KruizeBulkProfileEntry> loadAllBulkProfiles() throws Exception {
+        List<KruizeBulkProfileEntry> bulkProfiles = new ArrayList<>();
+        Transaction tx = null;
+        try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
+            try {
+                tx = session.beginTransaction();
+                Query<KruizeBulkProfileEntry> query = session.createQuery(
+                        DBConstants.SQLQUERY.SELECT_FROM_BULK_PROFILE + " k ORDER BY k.profileName",
+                        KruizeBulkProfileEntry.class);
+                bulkProfiles = query.list();
+                tx.commit();
+            } catch (HibernateException e) {
+                LOGGER.error("Error loading bulk profiles: {}", e.getMessage());
+                if (tx != null) tx.rollback();
+                throw new Exception("Error loading bulk profiles: " + e.getMessage());
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error loading bulk profiles: {}", e.getMessage());
+            throw new Exception("Error loading bulk profiles: " + e.getMessage());
+        }
+        return bulkProfiles;
+    }
+
+    /**
+     * Update an existing bulk profile
+     *
+     * @param kruizeBulkProfileEntry Bulk Profile Database object to be updated
+     * @return validationOutputData contains the status of the DB update operation
+     */
+    @Override
+    public ValidationOutputData updateBulkProfileToDB(KruizeBulkProfileEntry kruizeBulkProfileEntry) {
+        ValidationOutputData validationOutputData = new ValidationOutputData(false, null, null);
+        Transaction tx = null;
+        try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
+            try {
+                tx = session.beginTransaction();
+                session.merge(kruizeBulkProfileEntry);
+                tx.commit();
+                validationOutputData.setSuccess(true);
+            } catch (HibernateException e) {
+                LOGGER.error("Not able to update bulk profile due to {}", e.getMessage());
+                if (tx != null) tx.rollback();
+                e.printStackTrace();
+                validationOutputData.setSuccess(false);
+                validationOutputData.setMessage(e.getMessage());
+            }
+        } catch (Exception e) {
+            LOGGER.error("Not able to update bulk profile due to {}", e.getMessage());
+            validationOutputData.setMessage(e.getMessage());
+        }
+        return validationOutputData;
+    }
+
+    /**
+     * Delete a bulk profile by name
+     *
+     * @param profileName Name of the bulk profile to delete
+     * @return validationOutputData contains the status of the DB delete operation
+     */
+    @Override
+    public ValidationOutputData deleteBulkProfileByName(String profileName) {
+        ValidationOutputData validationOutputData = new ValidationOutputData(false, null, null);
+        Transaction tx = null;
+        try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
+            try {
+                tx = session.beginTransaction();
+                Query query = session.createQuery(
+                        DELETE_BULK_PROFILE_BY_NAME, null);
+                query.setParameter("profileName", profileName);
+                int result = query.executeUpdate();
+                tx.commit();
+
+                if (result > 0) {
+                    validationOutputData.setSuccess(true);
+                } else {
+                    validationOutputData.setSuccess(false);
+                    validationOutputData.setMessage("Bulk profile not found: " + profileName);
+                    validationOutputData.setErrorCode(HttpServletResponse.SC_NOT_FOUND);
+                }
+            } catch (HibernateException e) {
+                LOGGER.error("Not able to delete bulk profile due to {}", e.getMessage());
+                if (tx != null) tx.rollback();
+                e.printStackTrace();
+                validationOutputData.setSuccess(false);
+                validationOutputData.setMessage(e.getMessage());
+            }
+        } catch (Exception e) {
+            LOGGER.error("Not able to delete bulk profile due to {}", e.getMessage());
+            validationOutputData.setMessage(e.getMessage());
+        }
+        return validationOutputData;
+    }
+
+    /**
+     * Load all enabled bulk profiles
+     *
+     * @return List of enabled bulk profiles
+     */
+    @Override
+    public List<KruizeBulkProfileEntry> loadEnabledBulkProfiles() throws Exception {
+        List<KruizeBulkProfileEntry> bulkProfiles = new ArrayList<>();
+        Transaction tx = null;
+        try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
+            try {
+                tx = session.beginTransaction();
+                Query<KruizeBulkProfileEntry> query = session.createQuery(
+                        LOAD_ALL_ENABLED_BULK_PROFILES,
+                        KruizeBulkProfileEntry.class);
+                bulkProfiles = query.list();
+                tx.commit();
+            } catch (HibernateException e) {
+                LOGGER.error("Error loading enabled bulk profiles: {}", e.getMessage());
+                if (tx != null) tx.rollback();
+                throw new Exception("Error loading enabled bulk profiles: " + e.getMessage());
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error loading enabled bulk profiles: {}", e.getMessage());
+            throw new Exception("Error loading enabled bulk profiles: " + e.getMessage());
+        }
+        return bulkProfiles;
     }
 }
