@@ -95,6 +95,7 @@ public class BulkConfigService extends HttpServlet {
         try {
             // Parse request body
             String requestBody = req.getReader().lines().collect(Collectors.joining());
+            LOGGER.info("Received bulk profile creation request: {}", requestBody);
 
             BulkConfig bulkConfig = objectMapper.readValue(requestBody, BulkConfig.class);
 
@@ -109,6 +110,8 @@ public class BulkConfigService extends HttpServlet {
             // Convert to database entity and save
             KruizeBulkConfigEntry configEntry = KruizeBulkConfigEntry.fromBulkConfig(bulkConfig);
 
+            LOGGER.info("Saving bulk config '{}' to database", bulkConfig.getConfigName());
+
             ValidationOutputData saveResult = experimentDAO.addBulkConfigToDB(configEntry);
 
             if (!saveResult.isSuccess()) {
@@ -119,10 +122,16 @@ public class BulkConfigService extends HttpServlet {
                 return;
             }
 
+            LOGGER.info("Successfully saved bulk config '{}' to database", bulkConfig.getConfigName());
 
             // Return success response
             resp.setStatus(HttpServletResponse.SC_CREATED);
+
             out.write(objectMapper.writeValueAsString(bulkConfig));
+
+            LOGGER.info("Bulk config '{}' created successfully with scheduling: {}",
+                    bulkConfig.getConfigName(),
+                    bulkConfig.getRecommendationSettings().getScheduling());
 
         } catch (Exception e) {
             LOGGER.error("Error creating bulk config: {}", e.getMessage(), e);
@@ -215,7 +224,9 @@ public class BulkConfigService extends HttpServlet {
 
             // Return updated config
             resp.setStatus(HttpServletResponse.SC_OK);
+
             out.write(objectMapper.writeValueAsString(existingConfig));
+            LOGGER.info("Updated bulk config: {}", configName);
 
         } catch (Exception e) {
             LOGGER.error("Error updating bulk config: {}", e.getMessage(), e);
@@ -260,6 +271,8 @@ public class BulkConfigService extends HttpServlet {
             // Return success response
             resp.setStatus(HttpServletResponse.SC_OK);
             out.write("{\"message\":\"Bulk config deleted successfully\",\"config_name\":\"" + configName + "\"}");
+
+            LOGGER.info("Deleted bulk config: {}", configName);
 
         } catch (Exception e) {
             LOGGER.error("Error deleting bulk config: {}", e.getMessage(), e);
@@ -307,6 +320,8 @@ public class BulkConfigService extends HttpServlet {
         try {
             String webhookUrl = config.getWebhookUrl();
             String payload = objectMapper.writeValueAsString(config);
+
+            LOGGER.info("Triggering webhook for config: {} to URL: {}", config.getConfigName(), webhookUrl);
 
             GenericRestApiClient client = new GenericRestApiClient();
             client.setBaseURL(webhookUrl);
