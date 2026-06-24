@@ -99,6 +99,13 @@ public class BulkProfileService extends HttpServlet {
 
             BulkProfile bulkProfile = objectMapper.readValue(requestBody, BulkProfile.class);
 
+            // Validate the profile
+            ValidationOutputData validation = BulkProfileValidation.validateCreate(bulkProfile);
+            if (!validation.isSuccess()) {
+                sendErrorResponse(resp, out, validation.getErrorCode(), validation.getMessage());
+                return;
+            }
+
             // Check if profile already exists
             KruizeBulkProfileEntry existingProfile = experimentDAO.loadBulkProfileByName(bulkProfile.getProfileName());
             if (existingProfile != null) {
@@ -157,6 +164,13 @@ public class BulkProfileService extends HttpServlet {
             // Parse request body
             String requestBody = req.getReader().lines().collect(Collectors.joining());
             BulkProfileUpdateRequest updateRequest = objectMapper.readValue(requestBody, BulkProfileUpdateRequest.class);
+
+            // Validate the update request
+            ValidationOutputData validation = BulkProfileValidation.validateUpdate(updateRequest);
+            if (!validation.isSuccess()) {
+                sendErrorResponse(resp, out, validation.getErrorCode(), validation.getMessage());
+                return;
+            }
 
             // Load existing profile
             KruizeBulkProfileEntry existingEntry = experimentDAO.loadBulkProfileByName(profileName);
