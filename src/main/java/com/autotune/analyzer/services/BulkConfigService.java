@@ -109,7 +109,6 @@ public class BulkConfigService extends HttpServlet {
 
             // Convert to database entity and save
             KruizeBulkConfigEntry configEntry = KruizeBulkConfigEntry.fromBulkConfig(bulkConfig);
-
             LOGGER.info("Saving bulk config '{}' to database", bulkConfig.getConfigName());
 
             ValidationOutputData saveResult = experimentDAO.addBulkConfigToDB(configEntry);
