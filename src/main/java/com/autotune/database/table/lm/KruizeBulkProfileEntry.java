@@ -44,7 +44,7 @@ public class KruizeBulkProfileEntry {
     private String profileName;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "clusters", columnDefinition = "jsonb")
+    @Column(name = "clusters", columnDefinition = "jsonb", nullable = false)
     private JsonNode clusters;
 
     @JdbcTypeCode(SqlTypes.JSON)
