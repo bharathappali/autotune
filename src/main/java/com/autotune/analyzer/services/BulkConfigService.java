@@ -17,6 +17,7 @@ package com.autotune.analyzer.services;
 
 import com.autotune.analyzer.serviceObjects.BulkConfig;
 import com.autotune.analyzer.serviceObjects.BulkConfigUpdateRequest;
+import com.autotune.common.bulk.BulkConfigValidation;
 import com.autotune.common.data.ValidationOutputData;
 import com.autotune.database.dao.ExperimentDAO;
 import com.autotune.database.dao.ExperimentDAOImpl;
@@ -99,6 +100,13 @@ public class BulkConfigService extends HttpServlet {
 
             BulkConfig bulkConfig = objectMapper.readValue(requestBody, BulkConfig.class);
 
+            // Validate the config
+            ValidationOutputData validation = BulkConfigValidation.validateCreate(bulkConfig);
+            if (!validation.isSuccess()) {
+                sendErrorResponse(resp, out, validation.getErrorCode(), validation.getMessage());
+                return;
+            }
+
             // Check if config already exists
             KruizeBulkConfigEntry existingConfig = experimentDAO.loadBulkConfigByName(bulkConfig.getConfigName());
             if (existingConfig != null) {
@@ -160,8 +168,16 @@ public class BulkConfigService extends HttpServlet {
             String requestBody = req.getReader().lines().collect(Collectors.joining());
             BulkConfigUpdateRequest updateRequest = objectMapper.readValue(requestBody, BulkConfigUpdateRequest.class);
 
+            // Validate the update request
+            ValidationOutputData validation = BulkConfigValidation.validateUpdate(updateRequest);
+            if (!validation.isSuccess()) {
+                sendErrorResponse(resp, out, validation.getErrorCode(), validation.getMessage());
+                return;
+            }
+
             // Load existing config
             KruizeBulkConfigEntry existingEntry = experimentDAO.loadBulkConfigByName(configName);
+
             if (existingEntry == null) {
                 sendErrorResponse(resp, out, HttpServletResponse.SC_NOT_FOUND,
                         "Bulk config not found: " + configName);
