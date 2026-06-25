@@ -16,6 +16,7 @@
 package com.autotune.analyzer.services;
 
 import com.autotune.analyzer.serviceObjects.BulkProfile;
+import com.autotune.common.bulk.BulkProfileValidation;
 import com.autotune.common.data.ValidationOutputData;
 import com.autotune.database.dao.ExperimentDAO;
 import com.autotune.database.dao.ExperimentDAOImpl;
