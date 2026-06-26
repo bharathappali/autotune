@@ -43,7 +43,7 @@ public class BulkProfileValidation {
 
     // Valid values for recommendation settings
     private static final Set<String> VALID_TERMS = new HashSet<>(Arrays.asList(
-            "short_term", "medium_term", "long_term"
+            "short", "medium", "long"
     ));
 
     private static final Set<String> VALID_MODELS = new HashSet<>(Arrays.asList(
