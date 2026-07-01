@@ -18,37 +18,107 @@ package com.autotune.analyzer.serviceObjects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Map;
 
+/**
+ * Request object for updating a bulk profile.
+ * All fields are optional - only provided fields will be updated.
+ */
 public class BulkProfileUpdateRequest {
-    private String description;
+    @JsonProperty("cluster_name")
+    private String clusterName;
 
-    private List<BulkProfile.Cluster> clusters;
+    private List<String> datasources;
+
+    private List<String> namespaces;
+
+    private Map<String, String> labels;
+
+    @JsonProperty("experiment_types")
+    private List<String> experimentTypes;
+
+    @JsonProperty("metadata_profile")
+    private String metadataProfile;
+
+    @JsonProperty("performanceProfile")
+    private String performanceProfile;
+
+    @JsonProperty("trial_settings")
+    private BulkProfile.TrialSettings trialSettings;
 
     @JsonProperty("recommendation_settings")
     private BulkProfile.RecommendationSettings recommendationSettings;
 
-    private Boolean enabled;
-
     @JsonProperty("webhook_url")
     private String webhookUrl;
+
+    private Boolean enabled;
 
     public BulkProfileUpdateRequest() {
     }
 
-    public String getDescription() {
-        return description;
+    public String getClusterName() {
+        return clusterName;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setClusterName(String clusterName) {
+        this.clusterName = clusterName;
     }
 
-    public List<BulkProfile.Cluster> getClusters() {
-        return clusters;
+    public List<String> getDatasources() {
+        return datasources;
     }
 
-    public void setClusters(List<BulkProfile.Cluster> clusters) {
-        this.clusters = clusters;
+    public void setDatasources(List<String> datasources) {
+        this.datasources = datasources;
+    }
+
+    public List<String> getNamespaces() {
+        return namespaces;
+    }
+
+    public void setNamespaces(List<String> namespaces) {
+        this.namespaces = namespaces;
+    }
+
+    public Map<String, String> getLabels() {
+        return labels;
+    }
+
+    public void setLabels(Map<String, String> labels) {
+        this.labels = labels;
+    }
+
+    public List<String> getExperimentTypes() {
+        return experimentTypes;
+    }
+
+    public void setExperimentTypes(List<String> experimentTypes) {
+        this.experimentTypes = experimentTypes;
+    }
+
+    public String getMetadataProfile() {
+        return metadataProfile;
+    }
+
+    public void setMetadataProfile(String metadataProfile) {
+        this.metadataProfile = metadataProfile;
+    }
+
+    public String getPerformanceProfile() {
+        return performanceProfile;
+    }
+
+    public void setPerformanceProfile(String performanceProfile) {
+        this.performanceProfile = performanceProfile;
+    }
+
+    public BulkProfile.TrialSettings getTrialSettings() {
+        return trialSettings;
+    }
+
+    public void setTrialSettings(BulkProfile.TrialSettings trialSettings) {
+        this.trialSettings = trialSettings;
     }
 
     public BulkProfile.RecommendationSettings getRecommendationSettings() {
@@ -59,14 +129,6 @@ public class BulkProfileUpdateRequest {
         this.recommendationSettings = recommendationSettings;
     }
 
-    public Boolean getEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(Boolean enabled) {
-        this.enabled = enabled;
-    }
-
     public String getWebhookUrl() {
         return webhookUrl;
     }
@@ -75,15 +137,13 @@ public class BulkProfileUpdateRequest {
         this.webhookUrl = webhookUrl;
     }
 
-    /**
-     * Check if any field is set for update
-     * @return true if at least one field is set
-     */
-    public boolean hasUpdates() {
-        return description != null ||
-                clusters != null ||
-                recommendationSettings != null ||
-                enabled != null ||
-                webhookUrl != null;
+    public Boolean getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
     }
 }
+
+// Made with Bob

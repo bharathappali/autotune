@@ -23,21 +23,42 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Service object representing a Bulk Profile configuration.
+ * Aligned with CreateExperiment API structure for consistency.
+ */
 public class BulkProfile {
     @JsonProperty("profile_name")
     private String profileName;
 
-    private String description;
+    @JsonProperty("cluster_name")
+    private String clusterName;
 
-    private List<Cluster> clusters = new ArrayList<>();
+    private List<String> datasources = new ArrayList<>();
+
+    private List<String> namespaces = new ArrayList<>();
+
+    private Map<String, String> labels = new HashMap<>();
+
+    @JsonProperty("experiment_types")
+    private List<String> experimentTypes = new ArrayList<>();
+
+    @JsonProperty("metadata_profile")
+    private String metadataProfile;
+
+    @JsonProperty("performanceProfile")
+    private String performanceProfile;
+
+    @JsonProperty("trial_settings")
+    private TrialSettings trialSettings;
 
     @JsonProperty("recommendation_settings")
     private RecommendationSettings recommendationSettings;
 
-    private Boolean enabled = true;
-
     @JsonProperty("webhook_url")
     private String webhookUrl;
+
+    private Boolean enabled = true;
 
     @JsonProperty("created_at")
     private Instant createdAt;
@@ -48,16 +69,6 @@ public class BulkProfile {
     public BulkProfile() {
     }
 
-    public BulkProfile(String profileName, String description, List<Cluster> clusters,
-                       RecommendationSettings recommendationSettings, boolean enabled, String webhookUrl) {
-        this.profileName = profileName;
-        this.description = description;
-        this.clusters = clusters;
-        this.recommendationSettings = recommendationSettings;
-        this.enabled = enabled;
-        this.webhookUrl = webhookUrl;
-    }
-
     public String getProfileName() {
         return profileName;
     }
@@ -66,22 +77,76 @@ public class BulkProfile {
         this.profileName = profileName;
     }
 
-    public String getDescription() {
-        return description;
+    public String getClusterName() {
+        return clusterName;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setClusterName(String clusterName) {
+        this.clusterName = clusterName;
     }
 
-    public List<Cluster> getClusters() {
-        return clusters;
+    public List<String> getDatasources() {
+        return datasources;
     }
 
-    public void setClusters(List<Cluster> clusters) {
-        if (null == clusters)
-            clusters = new ArrayList<>();
-        this.clusters = clusters;
+    public void setDatasources(List<String> datasources) {
+        if (null == datasources)
+            datasources = new ArrayList<>();
+        this.datasources = datasources;
+    }
+
+    public List<String> getNamespaces() {
+        return namespaces;
+    }
+
+    public void setNamespaces(List<String> namespaces) {
+        if (null == namespaces)
+            namespaces = new ArrayList<>();
+        this.namespaces = namespaces;
+    }
+
+    public Map<String, String> getLabels() {
+        return labels;
+    }
+
+    public void setLabels(Map<String, String> labels) {
+        if (null == labels)
+            labels = new HashMap<>();
+        this.labels = labels;
+    }
+
+    public List<String> getExperimentTypes() {
+        return experimentTypes;
+    }
+
+    public void setExperimentTypes(List<String> experimentTypes) {
+        if (null == experimentTypes)
+            experimentTypes = new ArrayList<>();
+        this.experimentTypes = experimentTypes;
+    }
+
+    public String getMetadataProfile() {
+        return metadataProfile;
+    }
+
+    public void setMetadataProfile(String metadataProfile) {
+        this.metadataProfile = metadataProfile;
+    }
+
+    public String getPerformanceProfile() {
+        return performanceProfile;
+    }
+
+    public void setPerformanceProfile(String performanceProfile) {
+        this.performanceProfile = performanceProfile;
+    }
+
+    public TrialSettings getTrialSettings() {
+        return trialSettings;
+    }
+
+    public void setTrialSettings(TrialSettings trialSettings) {
+        this.trialSettings = trialSettings;
     }
 
     public RecommendationSettings getRecommendationSettings() {
@@ -92,20 +157,20 @@ public class BulkProfile {
         this.recommendationSettings = recommendationSettings;
     }
 
-    public Boolean getEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(Boolean enabled) {
-        this.enabled = enabled;
-    }
-
     public String getWebhookUrl() {
         return webhookUrl;
     }
 
     public void setWebhookUrl(String webhookUrl) {
         this.webhookUrl = webhookUrl;
+    }
+
+    public Boolean getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
     }
 
     public Instant getCreatedAt() {
@@ -125,84 +190,25 @@ public class BulkProfile {
     }
 
     /**
-     * Cluster configuration within a bulk profile
+     * Trial settings for the bulk profile (matches CreateExperiment structure)
      */
-    public static class Cluster {
+    public static class TrialSettings {
+        @JsonProperty("measurement_duration")
+        private String measurementDuration;
 
-        @JsonProperty("cluster_name")
-        private String clusterName;
-
-        private List<String> datasources = new ArrayList<>();
-
-        private List<String> namespaces = new ArrayList<>();
-
-        private Map<String, String> labels = new HashMap<>();
-
-        @JsonProperty("experiment_types")
-        private List<String> experimentTypes = new ArrayList<>();
-
-        @JsonProperty("metadata_profile")
-        private String metadataProfile;
-
-        public Cluster() {
+        public TrialSettings() {
         }
 
-        public Cluster(String clusterName, List<String> datasources, List<String> namespaces,
-                       Map<String, String> labels, List<String> experimentTypes, String metadataProfile) {
-            this.clusterName = clusterName;
-            this.datasources = datasources;
-            this.namespaces = namespaces;
-            this.labels = labels;
-            this.experimentTypes = experimentTypes;
-            this.metadataProfile = metadataProfile;
+        public TrialSettings(String measurementDuration) {
+            this.measurementDuration = measurementDuration;
         }
 
-        public String getClusterName() {
-            return clusterName;
+        public String getMeasurementDuration() {
+            return measurementDuration;
         }
 
-        public void setClusterName(String clusterName) {
-            this.clusterName = clusterName;
-        }
-
-        public List<String> getDatasources() {
-            return datasources;
-        }
-
-        public void setDatasources(List<String> datasources) {
-            this.datasources = datasources;
-        }
-
-        public List<String> getNamespaces() {
-            return namespaces;
-        }
-
-        public void setNamespaces(List<String> namespaces) {
-            this.namespaces = namespaces;
-        }
-
-        public Map<String, String> getLabels() {
-            return labels;
-        }
-
-        public void setLabels(Map<String, String> labels) {
-            this.labels = labels;
-        }
-
-        public List<String> getExperimentTypes() {
-            return experimentTypes;
-        }
-
-        public void setExperimentTypes(List<String> experimentTypes) {
-            this.experimentTypes = experimentTypes;
-        }
-
-        public String getMetadataProfile() {
-            return metadataProfile;
-        }
-
-        public void setMetadataProfile(String metadataProfile) {
-            this.metadataProfile = metadataProfile;
+        public void setMeasurementDuration(String measurementDuration) {
+            this.measurementDuration = measurementDuration;
         }
     }
 
@@ -210,24 +216,19 @@ public class BulkProfile {
      * Recommendation settings for the bulk profile
      */
     public static class RecommendationSettings {
-
         private String scheduling;
 
         private List<String> terms = new ArrayList<>();
 
         private List<String> models = new ArrayList<>();
 
-        @JsonProperty("measurement_duration")
-        private String measurementDuration;
-
         public RecommendationSettings() {
         }
 
-        public RecommendationSettings(String scheduling, List<String> terms, List<String> models, String measurementDuration) {
+        public RecommendationSettings(String scheduling, List<String> terms, List<String> models) {
             this.scheduling = scheduling;
             this.terms = terms;
             this.models = models;
-            this.measurementDuration = measurementDuration;
         }
 
         public String getScheduling() {
@@ -243,6 +244,8 @@ public class BulkProfile {
         }
 
         public void setTerms(List<String> terms) {
+            if (null == terms)
+                terms = new ArrayList<>();
             this.terms = terms;
         }
 
@@ -251,15 +254,11 @@ public class BulkProfile {
         }
 
         public void setModels(List<String> models) {
+            if (null == models)
+                models = new ArrayList<>();
             this.models = models;
-        }
-
-        public String getMeasurementDuration() {
-            return measurementDuration;
-        }
-
-        public void setMeasurementDuration(String measurementDuration) {
-            this.measurementDuration = measurementDuration;
         }
     }
 }
+
+// Made with Bob

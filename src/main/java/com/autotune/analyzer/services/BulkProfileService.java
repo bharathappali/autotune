@@ -185,20 +185,38 @@ public class BulkProfileService extends HttpServlet {
             BulkProfile existingProfile = existingEntry.toBulkProfile();
 
             // Apply updates
-            if (updateRequest.getDescription() != null) {
-                existingProfile.setDescription(updateRequest.getDescription());
+            if (updateRequest.getClusterName() != null) {
+                existingProfile.setClusterName(updateRequest.getClusterName());
             }
-            if (updateRequest.getClusters() != null) {
-                existingProfile.setClusters(updateRequest.getClusters());
+            if (updateRequest.getDatasources() != null) {
+                existingProfile.setDatasources(updateRequest.getDatasources());
+            }
+            if (updateRequest.getNamespaces() != null) {
+                existingProfile.setNamespaces(updateRequest.getNamespaces());
+            }
+            if (updateRequest.getLabels() != null) {
+                existingProfile.setLabels(updateRequest.getLabels());
+            }
+            if (updateRequest.getExperimentTypes() != null) {
+                existingProfile.setExperimentTypes(updateRequest.getExperimentTypes());
+            }
+            if (updateRequest.getMetadataProfile() != null) {
+                existingProfile.setMetadataProfile(updateRequest.getMetadataProfile());
+            }
+            if (updateRequest.getPerformanceProfile() != null) {
+                existingProfile.setPerformanceProfile(updateRequest.getPerformanceProfile());
+            }
+            if (updateRequest.getTrialSettings() != null) {
+                existingProfile.setTrialSettings(updateRequest.getTrialSettings());
             }
             if (updateRequest.getRecommendationSettings() != null) {
                 existingProfile.setRecommendationSettings(updateRequest.getRecommendationSettings());
             }
-            if (updateRequest.getEnabled() != null) {
-                existingProfile.setEnabled(updateRequest.getEnabled());
-            }
             if (updateRequest.getWebhookUrl() != null) {
                 existingProfile.setWebhookUrl(updateRequest.getWebhookUrl());
+            }
+            if (updateRequest.getEnabled() != null) {
+                existingProfile.setEnabled(updateRequest.getEnabled());
             }
 
             // Convert back to database entity and update

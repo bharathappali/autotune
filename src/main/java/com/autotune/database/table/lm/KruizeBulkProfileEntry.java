@@ -31,8 +31,7 @@ import java.sql.Timestamp;
 
 /**
  * Database entity to store Kruize bulk profile configurations.
- * Bulk profiles define templates for automated bulk job creation with
- * cluster configurations, recommendation settings, and scheduling.
+ * Aligned with CreateExperiment structure for consistency.
  */
 @Entity
 @Table(name = "kruize_bulk_profile")
@@ -44,12 +43,37 @@ public class KruizeBulkProfileEntry {
     @Column(name = "profile_name", columnDefinition = "VARCHAR(255)")
     private String profileName;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "clusters", columnDefinition = "jsonb", nullable = false)
-    private JsonNode clusters;
+    @Column(name = "cluster_name", columnDefinition = "VARCHAR(255)", nullable = false)
+    private String clusterName;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "recommendation_settings", columnDefinition = "jsonb")
+    @Column(name = "datasources", columnDefinition = "jsonb", nullable = false)
+    private JsonNode datasources;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "namespaces", columnDefinition = "jsonb", nullable = false)
+    private JsonNode namespaces;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "labels", columnDefinition = "jsonb")
+    private JsonNode labels;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "experiment_types", columnDefinition = "jsonb", nullable = false)
+    private JsonNode experimentTypes;
+
+    @Column(name = "metadata_profile", columnDefinition = "VARCHAR(255)")
+    private String metadataProfile;
+
+    @Column(name = "performance_profile", columnDefinition = "VARCHAR(255)", nullable = false)
+    private String performanceProfile;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "trial_settings", columnDefinition = "jsonb")
+    private JsonNode trialSettings;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "recommendation_settings", columnDefinition = "jsonb", nullable = false)
     private JsonNode recommendationSettings;
 
     @Column(name = "webhook_url", columnDefinition = "VARCHAR(500)")
@@ -68,18 +92,6 @@ public class KruizeBulkProfileEntry {
     public KruizeBulkProfileEntry() {
     }
 
-    // Constructor with all fields
-    public KruizeBulkProfileEntry(String profileName, JsonNode clusters, JsonNode recommendationSettings,
-                                  String webhookUrl, Boolean enabled, Timestamp createdAt, Timestamp updatedAt) {
-        this.profileName = profileName;
-        this.clusters = clusters;
-        this.recommendationSettings = recommendationSettings;
-        this.webhookUrl = webhookUrl;
-        this.enabled = enabled;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
-
     public String getProfileName() {
         return profileName;
     }
@@ -88,12 +100,68 @@ public class KruizeBulkProfileEntry {
         this.profileName = profileName;
     }
 
-    public JsonNode getClusters() {
-        return clusters;
+    public String getClusterName() {
+        return clusterName;
     }
 
-    public void setClusters(JsonNode clusters) {
-        this.clusters = clusters;
+    public void setClusterName(String clusterName) {
+        this.clusterName = clusterName;
+    }
+
+    public JsonNode getDatasources() {
+        return datasources;
+    }
+
+    public void setDatasources(JsonNode datasources) {
+        this.datasources = datasources;
+    }
+
+    public JsonNode getNamespaces() {
+        return namespaces;
+    }
+
+    public void setNamespaces(JsonNode namespaces) {
+        this.namespaces = namespaces;
+    }
+
+    public JsonNode getLabels() {
+        return labels;
+    }
+
+    public void setLabels(JsonNode labels) {
+        this.labels = labels;
+    }
+
+    public JsonNode getExperimentTypes() {
+        return experimentTypes;
+    }
+
+    public void setExperimentTypes(JsonNode experimentTypes) {
+        this.experimentTypes = experimentTypes;
+    }
+
+    public String getMetadataProfile() {
+        return metadataProfile;
+    }
+
+    public void setMetadataProfile(String metadataProfile) {
+        this.metadataProfile = metadataProfile;
+    }
+
+    public String getPerformanceProfile() {
+        return performanceProfile;
+    }
+
+    public void setPerformanceProfile(String performanceProfile) {
+        this.performanceProfile = performanceProfile;
+    }
+
+    public JsonNode getTrialSettings() {
+        return trialSettings;
+    }
+
+    public void setTrialSettings(JsonNode trialSettings) {
+        this.trialSettings = trialSettings;
     }
 
     public JsonNode getRecommendationSettings() {
@@ -143,14 +211,53 @@ public class KruizeBulkProfileEntry {
         try {
             BulkProfile profile = new BulkProfile();
             profile.setProfileName(this.profileName);
+            profile.setClusterName(this.clusterName);
 
-            // Convert JsonNode to List<Cluster>
-            if (this.clusters != null) {
-                profile.setClusters(objectMapper.convertValue(
-                        this.clusters,
+            // Convert JsonNode arrays to List<String>
+            if (this.datasources != null) {
+                profile.setDatasources(objectMapper.convertValue(
+                        this.datasources,
                         objectMapper.getTypeFactory().constructCollectionType(
-                                java.util.List.class, BulkProfile.Cluster.class
+                                java.util.List.class, String.class
                         )
+                ));
+            }
+
+            if (this.namespaces != null) {
+                profile.setNamespaces(objectMapper.convertValue(
+                        this.namespaces,
+                        objectMapper.getTypeFactory().constructCollectionType(
+                                java.util.List.class, String.class
+                        )
+                ));
+            }
+
+            if (this.labels != null) {
+                profile.setLabels(objectMapper.convertValue(
+                        this.labels,
+                        objectMapper.getTypeFactory().constructMapType(
+                                java.util.Map.class, String.class, String.class
+                        )
+                ));
+            }
+
+            if (this.experimentTypes != null) {
+                profile.setExperimentTypes(objectMapper.convertValue(
+                        this.experimentTypes,
+                        objectMapper.getTypeFactory().constructCollectionType(
+                                java.util.List.class, String.class
+                        )
+                ));
+            }
+
+            profile.setMetadataProfile(this.metadataProfile);
+            profile.setPerformanceProfile(this.performanceProfile);
+
+            // Convert JsonNode to TrialSettings
+            if (this.trialSettings != null) {
+                profile.setTrialSettings(objectMapper.convertValue(
+                        this.trialSettings,
+                        BulkProfile.TrialSettings.class
                 ));
             }
 
@@ -186,10 +293,31 @@ public class KruizeBulkProfileEntry {
         try {
             KruizeBulkProfileEntry entry = new KruizeBulkProfileEntry();
             entry.setProfileName(profile.getProfileName());
+            entry.setClusterName(profile.getClusterName());
 
-            // Convert List<Cluster> to JsonNode
-            if (profile.getClusters() != null) {
-                entry.setClusters(objectMapper.valueToTree(profile.getClusters()));
+            // Convert List<String> to JsonNode
+            if (profile.getDatasources() != null) {
+                entry.setDatasources(objectMapper.valueToTree(profile.getDatasources()));
+            }
+
+            if (profile.getNamespaces() != null) {
+                entry.setNamespaces(objectMapper.valueToTree(profile.getNamespaces()));
+            }
+
+            if (profile.getLabels() != null) {
+                entry.setLabels(objectMapper.valueToTree(profile.getLabels()));
+            }
+
+            if (profile.getExperimentTypes() != null) {
+                entry.setExperimentTypes(objectMapper.valueToTree(profile.getExperimentTypes()));
+            }
+
+            entry.setMetadataProfile(profile.getMetadataProfile());
+            entry.setPerformanceProfile(profile.getPerformanceProfile());
+
+            // Convert TrialSettings to JsonNode
+            if (profile.getTrialSettings() != null) {
+                entry.setTrialSettings(objectMapper.valueToTree(profile.getTrialSettings()));
             }
 
             // Convert RecommendationSettings to JsonNode
@@ -218,7 +346,14 @@ public class KruizeBulkProfileEntry {
     public String toString() {
         return "KruizeBulkProfileEntry{" +
                 "profileName='" + profileName + '\'' +
-                ", clusters=" + clusters +
+                ", clusterName='" + clusterName + '\'' +
+                ", datasources=" + datasources +
+                ", namespaces=" + namespaces +
+                ", labels=" + labels +
+                ", experimentTypes=" + experimentTypes +
+                ", metadataProfile='" + metadataProfile + '\'' +
+                ", performanceProfile='" + performanceProfile + '\'' +
+                ", trialSettings=" + trialSettings +
                 ", recommendationSettings=" + recommendationSettings +
                 ", webhookUrl='" + webhookUrl + '\'' +
                 ", enabled=" + enabled +
@@ -227,3 +362,5 @@ public class KruizeBulkProfileEntry {
                 '}';
     }
 }
+
+// Made with Bob
