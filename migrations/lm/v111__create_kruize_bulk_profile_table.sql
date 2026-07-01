@@ -14,16 +14,3 @@ CREATE TABLE IF NOT EXISTS kruize_bulk_profile (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- Index for enabled profiles
-CREATE INDEX IF NOT EXISTS idx_bulk_profile_enabled
-ON kruize_bulk_profile (enabled)
-WHERE enabled = true;
-
--- Index for cluster lookups
-CREATE INDEX IF NOT EXISTS idx_bulk_profile_cluster
-ON kruize_bulk_profile (cluster_name);
-
--- GIN index for JSONB label queries
-CREATE INDEX IF NOT EXISTS idx_bulk_profile_labels
-ON kruize_bulk_profile USING GIN (labels);
