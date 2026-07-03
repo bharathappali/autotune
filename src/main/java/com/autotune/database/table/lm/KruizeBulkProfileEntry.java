@@ -46,21 +46,18 @@ public class KruizeBulkProfileEntry {
     @Column(name = "cluster_name", columnDefinition = "VARCHAR(255)", nullable = false)
     private String clusterName;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "datasources", columnDefinition = "jsonb", nullable = false)
-    private JsonNode datasources;
+    @Column(name = "datasources", columnDefinition = "text[]", nullable = false)
+    private String[] datasources;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "namespaces", columnDefinition = "jsonb", nullable = false)
-    private JsonNode namespaces;
+    @Column(name = "namespaces", columnDefinition = "text[]", nullable = false)
+    private String[] namespaces;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "labels", columnDefinition = "jsonb")
     private JsonNode labels;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "experiment_types", columnDefinition = "jsonb", nullable = false)
-    private JsonNode experimentTypes;
+    @Column(name = "experiment_types", columnDefinition = "text[]", nullable = false)
+    private String[] experimentTypes;
 
     @Column(name = "metadata_profile", columnDefinition = "VARCHAR(255)")
     private String metadataProfile;
@@ -108,19 +105,19 @@ public class KruizeBulkProfileEntry {
         this.clusterName = clusterName;
     }
 
-    public JsonNode getDatasources() {
+    public String[] getDatasources() {
         return datasources;
     }
 
-    public void setDatasources(JsonNode datasources) {
+    public void setDatasources(String[] datasources) {
         this.datasources = datasources;
     }
 
-    public JsonNode getNamespaces() {
+    public String[] getNamespaces() {
         return namespaces;
     }
 
-    public void setNamespaces(JsonNode namespaces) {
+    public void setNamespaces(String[] namespaces) {
         this.namespaces = namespaces;
     }
 
@@ -132,11 +129,11 @@ public class KruizeBulkProfileEntry {
         this.labels = labels;
     }
 
-    public JsonNode getExperimentTypes() {
+    public String[] getExperimentTypes() {
         return experimentTypes;
     }
 
-    public void setExperimentTypes(JsonNode experimentTypes) {
+    public void setExperimentTypes(String[] experimentTypes) {
         this.experimentTypes = experimentTypes;
     }
 
@@ -213,23 +210,13 @@ public class KruizeBulkProfileEntry {
             profile.setProfileName(this.profileName);
             profile.setClusterName(this.clusterName);
 
-            // Convert JsonNode arrays to List<String>
+            // Convert String[] arrays to List<String>
             if (this.datasources != null) {
-                profile.setDatasources(objectMapper.convertValue(
-                        this.datasources,
-                        objectMapper.getTypeFactory().constructCollectionType(
-                                java.util.List.class, String.class
-                        )
-                ));
+                profile.setDatasources(java.util.Arrays.asList(this.datasources));
             }
 
             if (this.namespaces != null) {
-                profile.setNamespaces(objectMapper.convertValue(
-                        this.namespaces,
-                        objectMapper.getTypeFactory().constructCollectionType(
-                                java.util.List.class, String.class
-                        )
-                ));
+                profile.setNamespaces(java.util.Arrays.asList(this.namespaces));
             }
 
             if (this.labels != null) {
@@ -242,12 +229,7 @@ public class KruizeBulkProfileEntry {
             }
 
             if (this.experimentTypes != null) {
-                profile.setExperimentTypes(objectMapper.convertValue(
-                        this.experimentTypes,
-                        objectMapper.getTypeFactory().constructCollectionType(
-                                java.util.List.class, String.class
-                        )
-                ));
+                profile.setExperimentTypes(java.util.Arrays.asList(this.experimentTypes));
             }
 
             profile.setMetadataProfile(this.metadataProfile);
@@ -295,13 +277,13 @@ public class KruizeBulkProfileEntry {
             entry.setProfileName(profile.getProfileName());
             entry.setClusterName(profile.getClusterName());
 
-            // Convert List<String> to JsonNode
+            // Convert List<String> to String[]
             if (profile.getDatasources() != null) {
-                entry.setDatasources(objectMapper.valueToTree(profile.getDatasources()));
+                entry.setDatasources(profile.getDatasources().toArray(new String[0]));
             }
 
             if (profile.getNamespaces() != null) {
-                entry.setNamespaces(objectMapper.valueToTree(profile.getNamespaces()));
+                entry.setNamespaces(profile.getNamespaces().toArray(new String[0]));
             }
 
             if (profile.getLabels() != null) {
@@ -309,7 +291,7 @@ public class KruizeBulkProfileEntry {
             }
 
             if (profile.getExperimentTypes() != null) {
-                entry.setExperimentTypes(objectMapper.valueToTree(profile.getExperimentTypes()));
+                entry.setExperimentTypes(profile.getExperimentTypes().toArray(new String[0]));
             }
 
             entry.setMetadataProfile(profile.getMetadataProfile());
