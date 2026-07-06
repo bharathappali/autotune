@@ -5,11 +5,7 @@ import com.autotune.analyzer.serviceObjects.KubernetesAPIObject;
 import com.autotune.analyzer.utils.AnalyzerConstants;
 import com.autotune.common.data.ValidationOutputData;
 import com.autotune.database.table.*;
-import com.autotune.database.table.lm.KruizeBulkJobEntry;
-import com.autotune.database.table.lm.KruizeLMExperimentEntry;
-import com.autotune.database.table.lm.KruizeLMLayerEntry;
-import com.autotune.database.table.lm.KruizeLMMetadataProfileEntry;
-import com.autotune.database.table.lm.KruizeLMRecommendationEntry;
+import com.autotune.database.table.lm.*;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -178,4 +174,17 @@ public interface ExperimentDAO {
     Long getExperimentsCountFromDBByProfileName(String perfProfileName) throws Exception;
 
     ValidationOutputData updatePerformanceProfileInDB(KruizePerformanceProfileEntry kruizePerformanceProfileEntry);
+
+    // Bulk Profile operations
+    ValidationOutputData addBulkProfileToDB(KruizeBulkProfileEntry kruizeBulkProfileEntry);
+
+    KruizeBulkProfileEntry loadBulkProfileByName(String profileName) throws Exception;
+
+    List<KruizeBulkProfileEntry> loadAllBulkProfiles() throws Exception;
+
+    ValidationOutputData updateBulkProfileToDB(KruizeBulkProfileEntry kruizeBulkProfileEntry);
+
+    ValidationOutputData deleteBulkProfileByName(String profileName);
+
+    List<KruizeBulkProfileEntry> loadEnabledBulkProfiles() throws Exception;
 }
