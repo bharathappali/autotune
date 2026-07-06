@@ -1,10 +1,10 @@
-CREATE TABLE IF NOT EXISTS kruize_bulk_profile (
-    profile_name VARCHAR(255) PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS kruize_optimiser_bulk_config (
+    config_name VARCHAR(255) PRIMARY KEY,
     cluster_name VARCHAR(255) NOT NULL,
-    datasources TEXT[] NOT NULL,
-    namespaces TEXT[] NOT NULL,
+    datasources JSONB NOT NULL,
+    namespaces JSONB NOT NULL,
     labels JSONB,
-    experiment_types TEXT[] NOT NULL,
+    experiment_types JSONB NOT NULL,
     metadata_profile VARCHAR(255),
     performance_profile VARCHAR(255) NOT NULL,
     trial_settings JSONB,

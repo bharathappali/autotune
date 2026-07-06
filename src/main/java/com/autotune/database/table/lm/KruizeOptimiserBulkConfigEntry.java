@@ -15,7 +15,7 @@
  *******************************************************************************/
 package com.autotune.database.table.lm;
 
-import com.autotune.analyzer.serviceObjects.BulkProfile;
+import com.autotune.analyzer.serviceObjects.OptimiserBulkConfig;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Column;
@@ -35,13 +35,13 @@ import java.sql.Timestamp;
  */
 @Entity
 @Table(name = "kruize_optimiser_bulk_config")
-public class KruizeBulkProfileEntry {
-    private static final Logger LOGGER = LoggerFactory.getLogger(KruizeBulkProfileEntry.class);
+public class KruizeOptimiserBulkConfigEntry {
+    private static final Logger LOGGER = LoggerFactory.getLogger(KruizeOptimiserBulkConfigEntry.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Id
     @Column(name = "config_name", columnDefinition = "VARCHAR(255)")
-    private String profileName;
+    private String configName;
 
     @Column(name = "cluster_name", columnDefinition = "VARCHAR(255)", nullable = false)
     private String clusterName;
@@ -89,15 +89,15 @@ public class KruizeBulkProfileEntry {
     private Timestamp updatedAt;
 
     // Default constructor
-    public KruizeBulkProfileEntry() {
+    public KruizeOptimiserBulkConfigEntry() {
     }
 
-    public String getProfileName() {
-        return profileName;
+    public String getConfigName() {
+        return configName;
     }
 
-    public void setProfileName(String profileName) {
-        this.profileName = profileName;
+    public void setConfigName(String configName) {
+        this.configName = configName;
     }
 
     public String getClusterName() {
@@ -207,15 +207,15 @@ public class KruizeBulkProfileEntry {
     /**
      * Convert database entity to service object
      */
-    public BulkProfile toBulkProfile() {
+    public OptimiserBulkConfig toOptimiserBulkConfig() {
         try {
-            BulkProfile profile = new BulkProfile();
-            profile.setProfileName(this.profileName);
-            profile.setClusterName(this.clusterName);
+            OptimiserBulkConfig config = new OptimiserBulkConfig();
+            config.setConfigName(this.configName);
+            config.setClusterName(this.clusterName);
 
             // Convert JsonNode arrays to List<String>
             if (this.datasources != null) {
-                profile.setDatasources(objectMapper.convertValue(
+                config.setDatasources(objectMapper.convertValue(
                         this.datasources,
                         objectMapper.getTypeFactory().constructCollectionType(
                                 java.util.List.class, String.class
@@ -224,7 +224,7 @@ public class KruizeBulkProfileEntry {
             }
 
             if (this.namespaces != null) {
-                profile.setNamespaces(objectMapper.convertValue(
+                config.setNamespaces(objectMapper.convertValue(
                         this.namespaces,
                         objectMapper.getTypeFactory().constructCollectionType(
                                 java.util.List.class, String.class
@@ -233,7 +233,7 @@ public class KruizeBulkProfileEntry {
             }
 
             if (this.labels != null) {
-                profile.setLabels(objectMapper.convertValue(
+                config.setLabels(objectMapper.convertValue(
                         this.labels,
                         objectMapper.getTypeFactory().constructMapType(
                                 java.util.Map.class, String.class, String.class
@@ -242,7 +242,7 @@ public class KruizeBulkProfileEntry {
             }
 
             if (this.experimentTypes != null) {
-                profile.setExperimentTypes(objectMapper.convertValue(
+                config.setExperimentTypes(objectMapper.convertValue(
                         this.experimentTypes,
                         objectMapper.getTypeFactory().constructCollectionType(
                                 java.util.List.class, String.class
@@ -250,38 +250,38 @@ public class KruizeBulkProfileEntry {
                 ));
             }
 
-            profile.setMetadataProfile(this.metadataProfile);
-            profile.setPerformanceProfile(this.performanceProfile);
+            config.setMetadataProfile(this.metadataProfile);
+            config.setPerformanceProfile(this.performanceProfile);
 
             // Convert JsonNode to TrialSettings
             if (this.trialSettings != null) {
-                profile.setTrialSettings(objectMapper.convertValue(
+                config.setTrialSettings(objectMapper.convertValue(
                         this.trialSettings,
-                        BulkProfile.TrialSettings.class
+                        OptimiserBulkConfig.TrialSettings.class
                 ));
             }
 
             // Convert JsonNode to RecommendationSettings
             if (this.recommendationSettings != null) {
-                profile.setRecommendationSettings(objectMapper.convertValue(
+                config.setRecommendationSettings(objectMapper.convertValue(
                         this.recommendationSettings,
-                        BulkProfile.RecommendationSettings.class
+                        OptimiserBulkConfig.RecommendationSettings.class
                 ));
             }
 
-            profile.setWebhookUrl(this.webhookUrl);
-            profile.setEnabled(this.enabled);
+            config.setWebhookUrl(this.webhookUrl);
+            config.setEnabled(this.enabled);
 
             if (this.createdAt != null) {
-                profile.setCreatedAt(this.createdAt.toInstant());
+                config.setCreatedAt(this.createdAt.toInstant());
             }
             if (this.updatedAt != null) {
-                profile.setUpdatedAt(this.updatedAt.toInstant());
+                config.setUpdatedAt(this.updatedAt.toInstant());
             }
 
-            return profile;
+            return config;
         } catch (Exception e) {
-            LOGGER.error("Error converting KruizeBulkProfileEntry to BulkProfile: {}", e.getMessage());
+            LOGGER.error("Error converting KruizeOptimiserBulkConfigEntry to OptimiserBulkConfig: {}", e.getMessage());
             throw new RuntimeException("Failed to convert entity to service object", e);
         }
     }
@@ -289,63 +289,63 @@ public class KruizeBulkProfileEntry {
     /**
      * Create database entity from service object
      */
-    public static KruizeBulkProfileEntry fromBulkProfile(BulkProfile profile) {
+    public static KruizeOptimiserBulkConfigEntry fromOptimiserBulkConfig(OptimiserBulkConfig config) {
         try {
-            KruizeBulkProfileEntry entry = new KruizeBulkProfileEntry();
-            entry.setProfileName(profile.getProfileName());
-            entry.setClusterName(profile.getClusterName());
+            KruizeOptimiserBulkConfigEntry entry = new KruizeOptimiserBulkConfigEntry();
+            entry.setConfigName(config.getConfigName());
+            entry.setClusterName(config.getClusterName());
 
             // Convert List<String> to JsonNode
-            if (profile.getDatasources() != null) {
-                entry.setDatasources(objectMapper.valueToTree(profile.getDatasources()));
+            if (config.getDatasources() != null) {
+                entry.setDatasources(objectMapper.valueToTree(config.getDatasources()));
             }
 
-            if (profile.getNamespaces() != null) {
-                entry.setNamespaces(objectMapper.valueToTree(profile.getNamespaces()));
+            if (config.getNamespaces() != null) {
+                entry.setNamespaces(objectMapper.valueToTree(config.getNamespaces()));
             }
 
-            if (profile.getLabels() != null) {
-                entry.setLabels(objectMapper.valueToTree(profile.getLabels()));
+            if (config.getLabels() != null) {
+                entry.setLabels(objectMapper.valueToTree(config.getLabels()));
             }
 
-            if (profile.getExperimentTypes() != null) {
-                entry.setExperimentTypes(objectMapper.valueToTree(profile.getExperimentTypes()));
+            if (config.getExperimentTypes() != null) {
+                entry.setExperimentTypes(objectMapper.valueToTree(config.getExperimentTypes()));
             }
 
-            entry.setMetadataProfile(profile.getMetadataProfile());
-            entry.setPerformanceProfile(profile.getPerformanceProfile());
+            entry.setMetadataProfile(config.getMetadataProfile());
+            entry.setPerformanceProfile(config.getPerformanceProfile());
 
             // Convert TrialSettings to JsonNode
-            if (profile.getTrialSettings() != null) {
-                entry.setTrialSettings(objectMapper.valueToTree(profile.getTrialSettings()));
+            if (config.getTrialSettings() != null) {
+                entry.setTrialSettings(objectMapper.valueToTree(config.getTrialSettings()));
             }
 
             // Convert RecommendationSettings to JsonNode
-            if (profile.getRecommendationSettings() != null) {
-                entry.setRecommendationSettings(objectMapper.valueToTree(profile.getRecommendationSettings()));
+            if (config.getRecommendationSettings() != null) {
+                entry.setRecommendationSettings(objectMapper.valueToTree(config.getRecommendationSettings()));
             }
 
-            entry.setWebhookUrl(profile.getWebhookUrl());
-            entry.setEnabled(profile.getEnabled() != null ? profile.getEnabled() : true);
+            entry.setWebhookUrl(config.getWebhookUrl());
+            entry.setEnabled(config.getEnabled() != null ? config.getEnabled() : true);
 
-            if (profile.getCreatedAt() != null) {
-                entry.setCreatedAt(Timestamp.from(profile.getCreatedAt()));
+            if (config.getCreatedAt() != null) {
+                entry.setCreatedAt(Timestamp.from(config.getCreatedAt()));
             }
-            if (profile.getUpdatedAt() != null) {
-                entry.setUpdatedAt(Timestamp.from(profile.getUpdatedAt()));
+            if (config.getUpdatedAt() != null) {
+                entry.setUpdatedAt(Timestamp.from(config.getUpdatedAt()));
             }
 
             return entry;
         } catch (Exception e) {
-            LOGGER.error("Error converting BulkProfile to KruizeBulkProfileEntry: {}", e.getMessage());
+            LOGGER.error("Error converting OptimiserBulkConfig to KruizeOptimiserBulkConfigEntry: {}", e.getMessage());
             throw new RuntimeException("Failed to convert service object to entity", e);
         }
     }
 
     @Override
     public String toString() {
-        return "KruizeBulkProfileEntry{" +
-                "profileName='" + profileName + '\'' +
+        return "KruizeOptimiserBulkConfigEntry{" +
+                "configName='" + configName + '\'' +
                 ", clusterName='" + clusterName + '\'' +
                 ", datasources=" + datasources +
                 ", namespaces=" + namespaces +

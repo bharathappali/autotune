@@ -2105,7 +2105,7 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 Query<KruizeBulkProfileEntry> query = session.createQuery(
                         DBConstants.SQLQUERY.SELECT_FROM_BULK_PROFILE_BY_NAME,
                         KruizeBulkProfileEntry.class);
-                query.setParameter("profileName", profileName);
+                query.setParameter("configName", profileName);
                 kruizeBulkProfileEntry = query.uniqueResult();
                 tx.commit();
             } catch (NoResultException e) {
@@ -2197,7 +2197,7 @@ public class ExperimentDAOImpl implements ExperimentDAO {
                 tx = session.beginTransaction();
                 Query query = session.createQuery(
                         DELETE_BULK_PROFILE_BY_NAME, null);
-                query.setParameter("profileName", profileName);
+                query.setParameter("configName", profileName);
                 int result = query.executeUpdate();
                 tx.commit();
 

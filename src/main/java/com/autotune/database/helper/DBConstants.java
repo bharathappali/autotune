@@ -88,8 +88,8 @@ public class DBConstants {
         public static final String SELECT_FROM_LAYER = "from KruizeLMLayerEntry";
         public static final String SELECT_FROM_LAYER_BY_NAME = "from KruizeLMLayerEntry k WHERE k.layer_name = :layerName";
         public static final String SELECT_FROM_BULK_PROFILE = "from KruizeBulkProfileEntry";
-        public static final String SELECT_FROM_BULK_PROFILE_BY_NAME = "from KruizeBulkProfileEntry k WHERE k.profileName = :profileName";
-        public static final String LOAD_ALL_ENABLED_BULK_PROFILES = "FROM KruizeBulkProfileEntry WHERE enabled = true ORDER BY profile_name";
+        public static final String SELECT_FROM_BULK_PROFILE_BY_NAME = "from KruizeBulkProfileEntry k WHERE k.profileName = :configName";
+        public static final String LOAD_ALL_ENABLED_BULK_PROFILES = "FROM KruizeBulkProfileEntry WHERE enabled = true ORDER BY config_name";
         public static final String DELETE_FROM_EXPERIMENTS_BY_EXP_NAME = "DELETE FROM KruizeExperimentEntry k WHERE k.experiment_name = :experimentName";
         public static final String DELETE_FROM_LM_EXPERIMENTS_BY_EXP_NAME = "DELETE FROM KruizeLMExperimentEntry k WHERE k.experiment_name = :experimentName";
         public static final String DELETE_FROM_RESULTS_BY_EXP_NAME = "DELETE FROM KruizeResultsEntry k WHERE k.experiment_name = :experimentName";
@@ -98,7 +98,7 @@ public class DBConstants {
         public static final String DELETE_FROM_METADATA_BY_DATASOURCE_NAME = "DELETE FROM KruizeDSMetadataEntry km WHERE km.datasource_name = :dataSourceName";
         public static final String DELETE_FROM_METRIC_PROFILE_BY_PROFILE_NAME = "DELETE FROM KruizeMetricProfileEntry km WHERE km.name = :metricProfileName";
         public static final String DELETE_FROM_METADATA_PROFILE_BY_PROFILE_NAME = "DELETE FROM KruizeLMMetadataProfileEntry km WHERE km.name = :metadataProfileName";
-        public static final String DELETE_BULK_PROFILE_BY_NAME = "DELETE FROM KruizeBulkProfileEntry WHERE profile_name = :profileName";
+        public static final String DELETE_BULK_PROFILE_BY_NAME = "DELETE FROM KruizeBulkProfileEntry WHERE config_name = :configName";
         public static final String DB_PARTITION_DATERANGE = "CREATE TABLE IF NOT EXISTS %s_%s%s%s PARTITION OF %s FOR VALUES FROM ('%s-%s-%s 00:00:00.000') TO ('%s-%s-%s 23:59:59');";
         public static final String SELECT_ALL_KRUIZE_TABLES = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' " +
                 "and (table_name like 'kruize_results_%' or table_name like 'kruize_recommendations_%') ";
