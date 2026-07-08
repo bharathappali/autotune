@@ -15,12 +15,12 @@
  *******************************************************************************/
 package com.autotune.analyzer.services;
 
-import com.autotune.analyzer.serviceObjects.BulkProfile;
+import com.autotune.analyzer.serviceObjects.BulkConfig;
+import com.autotune.analyzer.serviceObjects.BulkConfigUpdateRequest;
 import com.autotune.common.data.ValidationOutputData;
 import com.autotune.database.dao.ExperimentDAO;
 import com.autotune.database.dao.ExperimentDAOImpl;
-import com.autotune.database.table.lm.KruizeBulkProfileEntry;
-import com.autotune.analyzer.serviceObjects.BulkProfileUpdateRequest;
+import com.autotune.database.table.lm.KruizeBulkConfigEntry;
 import com.autotune.utils.GenericRestApiClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -39,13 +39,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * REST API service for Bulk Profile management
- * Provides CRUD operations for bulk profiles and webhook notifications
+ * REST API service for Bulk Config management
+ * Provides CRUD operations for bulk configs and webhook notifications
  */
 @WebServlet(asyncSupported = true)
-public class BulkProfileService extends HttpServlet {
+public class BulkConfigService extends HttpServlet {
     private static final long serialVersionUID = 1L;
-    private static final Logger LOGGER = LoggerFactory.getLogger(BulkProfileService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BulkConfigService.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private ExperimentDAO experimentDAO;
 
@@ -56,9 +56,9 @@ public class BulkProfileService extends HttpServlet {
     }
 
     /**
-     * GET /bulkProfile - List all bulk profiles or get a specific profile
+     * GET /bulkProfile - List all bulk configs or get a specific config
      * Query parameters:
-     * - profile_name: (optional) Get specific profile by name
+     * - config_name: (optional) Get specific config by name
      */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -67,14 +67,14 @@ public class BulkProfileService extends HttpServlet {
         PrintWriter out = resp.getWriter();
 
         try {
-            String profileName = req.getParameter("profile_name");
+            String configName = req.getParameter("config_name");
 
-            if (profileName != null && !profileName.trim().isEmpty()) {
-                // Get specific profile
-                handleGetProfile(profileName, resp, out);
+            if (configName != null && !configName.trim().isEmpty()) {
+                // Get specific config
+                handleGetConfig(configName, resp, out);
             } else {
-                // List all profiles
-                handleListProfiles(resp, out);
+                // List all configs
+                handleListConfigs(resp, out);
             }
         } catch (Exception e) {
             LOGGER.error("Error processing GET request: {}", e.getMessage(), e);
@@ -84,7 +84,7 @@ public class BulkProfileService extends HttpServlet {
     }
 
     /**
-     * POST /bulkProfile - Create a new bulk profile
+     * POST /bulkProfile - Create a new bulk config
      */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -96,43 +96,43 @@ public class BulkProfileService extends HttpServlet {
             // Parse request body
             String requestBody = req.getReader().lines().collect(Collectors.joining());
 
-            BulkProfile bulkProfile = objectMapper.readValue(requestBody, BulkProfile.class);
+            BulkConfig bulkConfig = objectMapper.readValue(requestBody, BulkConfig.class);
 
-            // Check if profile already exists
-            KruizeBulkProfileEntry existingProfile = experimentDAO.loadBulkProfileByName(bulkProfile.getProfileName());
-            if (existingProfile != null) {
+            // Check if config already exists
+            KruizeBulkConfigEntry existingConfig = experimentDAO.loadBulkConfigByName(bulkConfig.getConfigName());
+            if (existingConfig != null) {
                 sendErrorResponse(resp, out, HttpServletResponse.SC_CONFLICT,
-                        "Bulk profile with name '" + bulkProfile.getProfileName() + "' already exists");
+                        "Bulk config with name '" + bulkConfig.getConfigName() + "' already exists");
                 return;
             }
 
             // Convert to database entity and save
-            KruizeBulkProfileEntry profileEntry = KruizeBulkProfileEntry.fromBulkProfile(bulkProfile);
+            KruizeBulkConfigEntry configEntry = KruizeBulkConfigEntry.fromBulkConfig(bulkConfig);
 
-            ValidationOutputData saveResult = experimentDAO.addBulkProfileToDB(profileEntry);
+            ValidationOutputData saveResult = experimentDAO.addBulkConfigToDB(configEntry);
 
             if (!saveResult.isSuccess()) {
-                LOGGER.error("Failed to save bulk profile '{}' to database: {}",
-                        bulkProfile.getProfileName(), saveResult.getMessage());
+                LOGGER.error("Failed to save bulk config '{}' to database: {}",
+                        bulkConfig.getConfigName(), saveResult.getMessage());
                 sendErrorResponse(resp, out, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                        "Failed to create bulk profile: " + saveResult.getMessage());
+                        "Failed to create bulk config: " + saveResult.getMessage());
                 return;
             }
 
 
             // Return success response
             resp.setStatus(HttpServletResponse.SC_CREATED);
-            out.write(objectMapper.writeValueAsString(bulkProfile));
+            out.write(objectMapper.writeValueAsString(bulkConfig));
 
         } catch (Exception e) {
-            LOGGER.error("Error creating bulk profile: {}", e.getMessage(), e);
+            LOGGER.error("Error creating bulk config: {}", e.getMessage(), e);
             sendErrorResponse(resp, out, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     "Internal server error: " + e.getMessage());
         }
     }
 
     /**
-     * PUT /bulkProfile?profile_name=<name> - Update an existing bulk profile
+     * PUT /bulkProfile?config_name=<name> - Update an existing bulk config
      */
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -141,73 +141,91 @@ public class BulkProfileService extends HttpServlet {
         PrintWriter out = resp.getWriter();
 
         try {
-            String profileName = req.getParameter("profile_name");
-            if (profileName == null || profileName.trim().isEmpty()) {
+            String configName = req.getParameter("config_name");
+            if (configName == null || configName.trim().isEmpty()) {
                 sendErrorResponse(resp, out, HttpServletResponse.SC_BAD_REQUEST,
-                        "profile_name query parameter is required");
+                        "config_name query parameter is required");
                 return;
             }
 
             // Parse request body
             String requestBody = req.getReader().lines().collect(Collectors.joining());
-            BulkProfileUpdateRequest updateRequest = objectMapper.readValue(requestBody, BulkProfileUpdateRequest.class);
+            BulkConfigUpdateRequest updateRequest = objectMapper.readValue(requestBody, BulkConfigUpdateRequest.class);
 
-            // Load existing profile
-            KruizeBulkProfileEntry existingEntry = experimentDAO.loadBulkProfileByName(profileName);
+            // Load existing config
+            KruizeBulkConfigEntry existingEntry = experimentDAO.loadBulkConfigByName(configName);
             if (existingEntry == null) {
                 sendErrorResponse(resp, out, HttpServletResponse.SC_NOT_FOUND,
-                        "Bulk profile not found: " + profileName);
+                        "Bulk config not found: " + configName);
                 return;
             }
 
-            // Convert existing entry to BulkProfile
-            BulkProfile existingProfile = existingEntry.toBulkProfile();
+            // Convert existing entry to BulkConfig
+            BulkConfig existingConfig = existingEntry.toBulkConfig();
 
             // Apply updates
-            if (updateRequest.getDescription() != null) {
-                existingProfile.setDescription(updateRequest.getDescription());
+            if (updateRequest.getClusterName() != null) {
+                existingConfig.setClusterName(updateRequest.getClusterName());
             }
-            if (updateRequest.getClusters() != null) {
-                existingProfile.setClusters(updateRequest.getClusters());
+            if (updateRequest.getDatasources() != null) {
+                existingConfig.setDatasources(updateRequest.getDatasources());
+            }
+            if (updateRequest.getNamespaces() != null) {
+                existingConfig.setNamespaces(updateRequest.getNamespaces());
+            }
+            if (updateRequest.getLabels() != null) {
+                existingConfig.setLabels(updateRequest.getLabels());
+            }
+            if (updateRequest.getExperimentTypes() != null) {
+                existingConfig.setExperimentTypes(updateRequest.getExperimentTypes());
+            }
+            if (updateRequest.getMetadataProfile() != null) {
+                existingConfig.setMetadataProfile(updateRequest.getMetadataProfile());
+            }
+            if (updateRequest.getPerformanceProfile() != null) {
+                existingConfig.setPerformanceProfile(updateRequest.getPerformanceProfile());
+            }
+            if (updateRequest.getTrialSettings() != null) {
+                existingConfig.setTrialSettings(updateRequest.getTrialSettings());
             }
             if (updateRequest.getRecommendationSettings() != null) {
-                existingProfile.setRecommendationSettings(updateRequest.getRecommendationSettings());
+                existingConfig.setRecommendationSettings(updateRequest.getRecommendationSettings());
             }
             if (updateRequest.getEnabled() != null) {
-                existingProfile.setEnabled(updateRequest.getEnabled());
+                existingConfig.setEnabled(updateRequest.getEnabled());
             }
             if (updateRequest.getWebhookUrl() != null) {
-                existingProfile.setWebhookUrl(updateRequest.getWebhookUrl());
+                existingConfig.setWebhookUrl(updateRequest.getWebhookUrl());
             }
 
             // Convert back to database entity and update
-            KruizeBulkProfileEntry updatedEntry = KruizeBulkProfileEntry.fromBulkProfile(existingProfile);
+            KruizeBulkConfigEntry updatedEntry = KruizeBulkConfigEntry.fromBulkConfig(existingConfig);
 
-            ValidationOutputData updateResult = experimentDAO.updateBulkProfileToDB(updatedEntry);
+            ValidationOutputData updateResult = experimentDAO.updateBulkConfigToDB(updatedEntry);
             if (!updateResult.isSuccess()) {
                 sendErrorResponse(resp, out, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                        "Failed to update bulk profile: " + updateResult.getMessage());
+                        "Failed to update bulk config: " + updateResult.getMessage());
                 return;
             }
 
             // Trigger webhook if URL is configured
-            if (existingProfile.getWebhookUrl() != null && !existingProfile.getWebhookUrl().trim().isEmpty()) {
-                triggerWebhook(existingProfile);
+            if (existingConfig.getWebhookUrl() != null && !existingConfig.getWebhookUrl().trim().isEmpty()) {
+                triggerWebhook(existingConfig);
             }
 
-            // Return updated profile
+            // Return updated config
             resp.setStatus(HttpServletResponse.SC_OK);
-            out.write(objectMapper.writeValueAsString(existingProfile));
+            out.write(objectMapper.writeValueAsString(existingConfig));
 
         } catch (Exception e) {
-            LOGGER.error("Error updating bulk profile: {}", e.getMessage(), e);
+            LOGGER.error("Error updating bulk config: {}", e.getMessage(), e);
             sendErrorResponse(resp, out, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     "Internal server error: " + e.getMessage());
         }
     }
 
     /**
-     * DELETE /bulkProfile?profile_name=<name> - Delete a bulk profile
+     * DELETE /bulkProfile?config_name=<name> - Delete a bulk config
      */
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -216,95 +234,95 @@ public class BulkProfileService extends HttpServlet {
         PrintWriter out = resp.getWriter();
 
         try {
-            String profileName = req.getParameter("profile_name");
-            if (profileName == null || profileName.trim().isEmpty()) {
+            String configName = req.getParameter("config_name");
+            if (configName == null || configName.trim().isEmpty()) {
                 sendErrorResponse(resp, out, HttpServletResponse.SC_BAD_REQUEST,
-                        "profile_name query parameter is required");
+                        "config_name query parameter is required");
                 return;
             }
 
-            // Check if profile exists
-            KruizeBulkProfileEntry existingProfile = experimentDAO.loadBulkProfileByName(profileName);
-            if (existingProfile == null) {
+            // Check if config exists
+            KruizeBulkConfigEntry existingConfig = experimentDAO.loadBulkConfigByName(configName);
+            if (existingConfig == null) {
                 sendErrorResponse(resp, out, HttpServletResponse.SC_NOT_FOUND,
-                        "Bulk profile not found: " + profileName);
+                        "Bulk config not found: " + configName);
                 return;
             }
 
-            // Delete the profile
-            ValidationOutputData deleteResult = experimentDAO.deleteBulkProfileByName(profileName);
+            // Delete the config
+            ValidationOutputData deleteResult = experimentDAO.deleteBulkConfigByName(configName);
             if (!deleteResult.isSuccess()) {
                 sendErrorResponse(resp, out, deleteResult.getErrorCode(),
-                        "Failed to delete bulk profile: " + deleteResult.getMessage());
+                        "Failed to delete bulk config: " + deleteResult.getMessage());
                 return;
             }
 
             // Return success response
             resp.setStatus(HttpServletResponse.SC_OK);
-            out.write("{\"message\":\"Bulk profile deleted successfully\",\"profile_name\":\"" + profileName + "\"}");
+            out.write("{\"message\":\"Bulk config deleted successfully\",\"config_name\":\"" + configName + "\"}");
 
         } catch (Exception e) {
-            LOGGER.error("Error deleting bulk profile: {}", e.getMessage(), e);
+            LOGGER.error("Error deleting bulk config: {}", e.getMessage(), e);
             sendErrorResponse(resp, out, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     "Internal server error: " + e.getMessage());
         }
     }
 
     /**
-     * Handle GET request for a specific profile
+     * Handle GET request for a specific config
      */
-    private void handleGetProfile(String profileName, HttpServletResponse resp, PrintWriter out) throws Exception {
-        KruizeBulkProfileEntry profileEntry = experimentDAO.loadBulkProfileByName(profileName);
+    private void handleGetConfig(String configName, HttpServletResponse resp, PrintWriter out) throws Exception {
+        KruizeBulkConfigEntry configEntry = experimentDAO.loadBulkConfigByName(configName);
 
-        if (profileEntry == null) {
+        if (configEntry == null) {
             sendErrorResponse(resp, out, HttpServletResponse.SC_NOT_FOUND,
-                    "Bulk profile not found: " + profileName);
+                    "Bulk config not found: " + configName);
             return;
         }
 
-        BulkProfile profile = profileEntry.toBulkProfile();
+        BulkConfig config = configEntry.toBulkConfig();
         resp.setStatus(HttpServletResponse.SC_OK);
-        out.write(objectMapper.writeValueAsString(profile));
+        out.write(objectMapper.writeValueAsString(config));
     }
 
     /**
-     * Handle GET request to list all profiles
+     * Handle GET request to list all configs
      */
-    private void handleListProfiles(HttpServletResponse resp, PrintWriter out) throws Exception {
-        List<KruizeBulkProfileEntry> profileEntries = experimentDAO.loadAllBulkProfiles();
-        List<BulkProfile> profiles = new ArrayList<>();
+    private void handleListConfigs(HttpServletResponse resp, PrintWriter out) throws Exception {
+        List<KruizeBulkConfigEntry> configEntries = experimentDAO.loadAllBulkConfigs();
+        List<BulkConfig> configs = new ArrayList<>();
 
-        for (KruizeBulkProfileEntry entry : profileEntries) {
-            profiles.add(entry.toBulkProfile());
+        for (KruizeBulkConfigEntry entry : configEntries) {
+            configs.add(entry.toBulkConfig());
         }
 
         resp.setStatus(HttpServletResponse.SC_OK);
-        out.write(objectMapper.writeValueAsString(profiles));
+        out.write(objectMapper.writeValueAsString(configs));
     }
 
     /**
-     * Trigger webhook notification for profile update
+     * Trigger webhook notification for config update
      */
-    private void triggerWebhook(BulkProfile profile) {
+    private void triggerWebhook(BulkConfig config) {
         try {
-            String webhookUrl = profile.getWebhookUrl();
-            String payload = objectMapper.writeValueAsString(profile);
+            String webhookUrl = config.getWebhookUrl();
+            String payload = objectMapper.writeValueAsString(config);
 
             GenericRestApiClient client = new GenericRestApiClient();
             client.setBaseURL(webhookUrl);
             GenericRestApiClient.HttpResponseWrapper response = client.callKruizeAPI(payload);
 
             if (response != null && response.getStatusCode() == HttpServletResponse.SC_OK) {
-                LOGGER.info("Webhook triggered successfully for profile: {}, status: {}",
-                        profile.getProfileName(), response.getStatusCode());
+                LOGGER.info("Webhook triggered successfully for config: {}, status: {}",
+                        config.getConfigName(), response.getStatusCode());
             } else {
-                LOGGER.warn("Webhook returned non-OK status for profile: {}, status: {}",
-                        profile.getProfileName(), response != null ? response.getStatusCode() : "null");
+                LOGGER.warn("Webhook returned non-OK status for config: {}, status: {}",
+                        config.getConfigName(), response != null ? response.getStatusCode() : "null");
             }
 
         } catch (Exception e) {
-            LOGGER.error("Failed to trigger webhook for profile: {}, error: {}",
-                    profile.getProfileName(), e.getMessage(), e);
+            LOGGER.error("Failed to trigger webhook for config: {}, error: {}",
+                    config.getConfigName(), e.getMessage(), e);
             // Don't fail the update if webhook fails - just log the error
         }
     }
