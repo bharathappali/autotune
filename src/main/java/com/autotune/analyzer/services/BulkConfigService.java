@@ -56,7 +56,7 @@ public class BulkConfigService extends HttpServlet {
     }
 
     /**
-     * GET /bulkProfile - List all bulk configs or get a specific config
+     * GET /bulkConfigs - List all bulk configs or get a specific config
      * Query parameters:
      * - config_name: (optional) Get specific config by name
      */
@@ -84,7 +84,7 @@ public class BulkConfigService extends HttpServlet {
     }
 
     /**
-     * POST /bulkProfile - Create a new bulk config
+     * POST /bulkConfigs - Create a new bulk config
      */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -95,7 +95,7 @@ public class BulkConfigService extends HttpServlet {
         try {
             // Parse request body
             String requestBody = req.getReader().lines().collect(Collectors.joining());
-            LOGGER.info("Received bulk profile creation request: {}", requestBody);
+            LOGGER.info("Received bulk config creation request: {}", requestBody);
 
             BulkConfig bulkConfig = objectMapper.readValue(requestBody, BulkConfig.class);
 
@@ -141,7 +141,7 @@ public class BulkConfigService extends HttpServlet {
     }
 
     /**
-     * PUT /bulkProfile?config_name=<name> - Update an existing bulk config
+     * PUT /bulkConfigs?config_name=<name> - Update an existing bulk config
      */
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -236,7 +236,7 @@ public class BulkConfigService extends HttpServlet {
     }
 
     /**
-     * DELETE /bulkProfile?config_name=<name> - Delete a bulk config
+     * DELETE /bulkConfigs?config_name=<name> - Delete a bulk config
      */
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
