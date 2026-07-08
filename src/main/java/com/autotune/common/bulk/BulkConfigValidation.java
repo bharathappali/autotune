@@ -31,8 +31,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -44,7 +42,7 @@ public class BulkConfigValidation {
 
     // Valid values for recommendation settings
     private static final Set<String> VALID_TERMS = new HashSet<>(Arrays.asList(
-            "short_term", "medium_term", "long_term"
+            "short", "medium", "long"
     ));
 
     private static final Set<String> VALID_MODELS = new HashSet<>(Arrays.asList(
