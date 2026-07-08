@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2024 Red Hat, IBM Corporation and others.
+ * Copyright (c) 2026 Red Hat, IBM Corporation and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  *******************************************************************************/
 package com.autotune.common.bulk;
 
-import com.autotune.analyzer.serviceObjects.BulkProfile;
-import com.autotune.analyzer.serviceObjects.BulkProfileUpdateRequest;
+import com.autotune.analyzer.serviceObjects.BulkConfig;
+import com.autotune.analyzer.serviceObjects.BulkConfigUpdateRequest;
 import com.autotune.common.data.ValidationOutputData;
 import com.autotune.common.datasource.DataSourceInfo;
 import com.autotune.common.datasource.DataSourceOperatorImpl;
@@ -32,14 +32,15 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
- * Validation utility for Bulk Profile API requests
+ * Validation utility for Bulk Config API requests
  */
-public class BulkProfileValidation {
+public class BulkConfigValidation {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(BulkProfileValidation.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BulkConfigValidation.class);
 
     // Valid values for recommendation settings
     private static final Set<String> VALID_TERMS = new HashSet<>(Arrays.asList(
@@ -59,46 +60,99 @@ public class BulkProfileValidation {
     private static final String SCHEDULING_PATTERN = "^\\d+\\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes|d|day|days)$";
 
     /**
-     * Validate a bulk profile for creation
-     * @param bulkProfile The bulk profile to validate
+     * Validate a bulk config for creation
+     * @param bulkConfig The bulk config to validate
      * @return ValidationOutputData with success status and error details if any
      */
-    public static ValidationOutputData validateCreate(BulkProfile bulkProfile) {
+    public static ValidationOutputData validateCreate(BulkConfig bulkConfig) {
         // Check required fields
-        if (bulkProfile.getProfileName() == null || bulkProfile.getProfileName().trim().isEmpty()) {
-            return new ValidationOutputData(false, "profile_name is required", HttpServletResponse.SC_BAD_REQUEST);
+        if (bulkConfig.getConfigName() == null || bulkConfig.getConfigName().trim().isEmpty()) {
+            return new ValidationOutputData(false, "config_name is required", HttpServletResponse.SC_BAD_REQUEST);
         }
 
-        if (bulkProfile.getClusters() == null || bulkProfile.getClusters().isEmpty()) {
-            return new ValidationOutputData(false, "At least one cluster is required", HttpServletResponse.SC_BAD_REQUEST);
-        }
-
-        if (bulkProfile.getRecommendationSettings() == null) {
-            return new ValidationOutputData(false, "recommendation_settings is required", HttpServletResponse.SC_BAD_REQUEST);
-        }
-
-        // Validate profile name format (alphanumeric, hyphens, underscores)
-        if (!bulkProfile.getProfileName().matches("^[a-zA-Z0-9_-]+$")) {
+        // Validate config name format (alphanumeric, hyphens, underscores)
+        if (!bulkConfig.getConfigName().matches("^[a-zA-Z0-9_-]+$")) {
             return new ValidationOutputData(false,
-                    "profile_name must contain only alphanumeric characters, hyphens, and underscores",
+                    "config_name must contain only alphanumeric characters, hyphens, and underscores",
                     HttpServletResponse.SC_BAD_REQUEST);
         }
 
-        // Validate clusters
-        ValidationOutputData clusterValidation = validateClusters(bulkProfile.getClusters());
-        if (!clusterValidation.isSuccess()) {
-            return clusterValidation;
+        // Validate cluster_name
+        if (bulkConfig.getClusterName() == null || bulkConfig.getClusterName().trim().isEmpty()) {
+            return new ValidationOutputData(false, "cluster_name is required", HttpServletResponse.SC_BAD_REQUEST);
         }
 
-        // Validate recommendation settings
-        ValidationOutputData settingsValidation = validateRecommendationSettings(bulkProfile.getRecommendationSettings());
+        // Validate datasources
+        if (bulkConfig.getDatasources() == null || bulkConfig.getDatasources().isEmpty()) {
+            return new ValidationOutputData(false, "At least one datasource is required", HttpServletResponse.SC_BAD_REQUEST);
+        }
+
+        // Validate each datasource connection
+        for (String datasourceName : bulkConfig.getDatasources()) {
+            String errorMessage = validateDatasourceConnection(datasourceName);
+            if (!errorMessage.isEmpty()) {
+                return new ValidationOutputData(false, errorMessage, HttpServletResponse.SC_BAD_REQUEST);
+            }
+        }
+
+        // Validate namespaces if provided
+        if (bulkConfig.getNamespaces() != null) {
+            for (String namespace : bulkConfig.getNamespaces()) {
+                if (namespace == null || namespace.trim().isEmpty()) {
+                    return new ValidationOutputData(false,
+                            "Empty namespace not allowed",
+                            HttpServletResponse.SC_BAD_REQUEST);
+                }
+            }
+        }
+
+        // Validate labels if provided
+        if (bulkConfig.getLabels() != null) {
+            for (String key : bulkConfig.getLabels().keySet()) {
+                if (key == null || key.trim().isEmpty()) {
+                    return new ValidationOutputData(false,
+                            "Empty label key not allowed",
+                            HttpServletResponse.SC_BAD_REQUEST);
+                }
+            }
+        }
+
+        // Validate experiment_types
+        if (bulkConfig.getExperimentTypes() == null || bulkConfig.getExperimentTypes().isEmpty()) {
+            return new ValidationOutputData(false,
+                    "At least one experiment_type is required",
+                    HttpServletResponse.SC_BAD_REQUEST);
+        }
+
+        for (String expType : bulkConfig.getExperimentTypes()) {
+            if (!VALID_EXPERIMENT_TYPES.contains(expType)) {
+                return new ValidationOutputData(false,
+                        "Invalid experiment_type: " + expType +
+                                ". Valid values are: " + VALID_EXPERIMENT_TYPES,
+                        HttpServletResponse.SC_BAD_REQUEST);
+            }
+        }
+
+        // Validate metadata_profile
+        if (bulkConfig.getMetadataProfile() == null || bulkConfig.getMetadataProfile().trim().isEmpty()) {
+            return new ValidationOutputData(false,
+                    "metadata_profile is required",
+                    HttpServletResponse.SC_BAD_REQUEST);
+        }
+
+        // Validate recommendation_settings
+        if (bulkConfig.getRecommendationSettings() == null) {
+            return new ValidationOutputData(false, "recommendation_settings is required", HttpServletResponse.SC_BAD_REQUEST);
+        }
+
+        ValidationOutputData settingsValidation = validateRecommendationSettings(bulkConfig.getRecommendationSettings());
         if (!settingsValidation.isSuccess()) {
             return settingsValidation;
         }
 
         // Validate webhook URL if provided
-        if (bulkProfile.getWebhookUrl() != null && !bulkProfile.getWebhookUrl().trim().isEmpty()) {
-            ValidationOutputData webhookValidation = validateWebhookUrl(bulkProfile.getWebhookUrl());
+        if (bulkConfig.getWebhookUrl() != null && !bulkConfig.getWebhookUrl().trim().isEmpty()) {
+            ValidationOutputData webhookValidation = validateWebhookUrl(bulkConfig.getWebhookUrl());
             if (!webhookValidation.isSuccess()) {
                 return webhookValidation;
             }
@@ -108,11 +162,11 @@ public class BulkProfileValidation {
     }
 
     /**
-     * Validate a bulk profile update request
+     * Validate a bulk config update request
      * @param updateRequest The update request to validate
      * @return ValidationOutputData with success status and error details if any
      */
-    public static ValidationOutputData validateUpdate(BulkProfileUpdateRequest updateRequest) {
+    public static ValidationOutputData validateUpdate(BulkConfigUpdateRequest updateRequest) {
         // Check if at least one field is provided for update
         if (!updateRequest.hasUpdates()) {
             return new ValidationOutputData(false,
@@ -120,17 +174,73 @@ public class BulkProfileValidation {
                     HttpServletResponse.SC_BAD_REQUEST);
         }
 
-        // Validate clusters if provided
-        if (updateRequest.getClusters() != null) {
-            if (updateRequest.getClusters().isEmpty()) {
+        // Validate cluster_name if provided
+        if (updateRequest.getClusterName() != null && updateRequest.getClusterName().trim().isEmpty()) {
+            return new ValidationOutputData(false,
+                    "cluster_name cannot be empty if provided",
+                    HttpServletResponse.SC_BAD_REQUEST);
+        }
+
+        // Validate datasources if provided
+        if (updateRequest.getDatasources() != null) {
+            if (updateRequest.getDatasources().isEmpty()) {
                 return new ValidationOutputData(false,
-                        "clusters cannot be empty if provided",
+                        "datasources cannot be empty if provided",
                         HttpServletResponse.SC_BAD_REQUEST);
             }
-            ValidationOutputData clusterValidation = validateClusters(updateRequest.getClusters());
-            if (!clusterValidation.isSuccess()) {
-                return clusterValidation;
+            // Validate each datasource connection
+            for (String datasourceName : updateRequest.getDatasources()) {
+                String errorMessage = validateDatasourceConnection(datasourceName);
+                if (!errorMessage.isEmpty()) {
+                    return new ValidationOutputData(false, errorMessage, HttpServletResponse.SC_BAD_REQUEST);
+                }
             }
+        }
+
+        // Validate namespaces if provided
+        if (updateRequest.getNamespaces() != null) {
+            for (String namespace : updateRequest.getNamespaces()) {
+                if (namespace == null || namespace.trim().isEmpty()) {
+                    return new ValidationOutputData(false,
+                            "Empty namespace not allowed",
+                            HttpServletResponse.SC_BAD_REQUEST);
+                }
+            }
+        }
+
+        // Validate labels if provided
+        if (updateRequest.getLabels() != null) {
+            for (String key : updateRequest.getLabels().keySet()) {
+                if (key == null || key.trim().isEmpty()) {
+                    return new ValidationOutputData(false,
+                            "Empty label key not allowed",
+                            HttpServletResponse.SC_BAD_REQUEST);
+                }
+            }
+        }
+
+        // Validate experiment_types if provided
+        if (updateRequest.getExperimentTypes() != null) {
+            if (updateRequest.getExperimentTypes().isEmpty()) {
+                return new ValidationOutputData(false,
+                        "experiment_types cannot be empty if provided",
+                        HttpServletResponse.SC_BAD_REQUEST);
+            }
+            for (String expType : updateRequest.getExperimentTypes()) {
+                if (!VALID_EXPERIMENT_TYPES.contains(expType)) {
+                    return new ValidationOutputData(false,
+                            "Invalid experiment_type: " + expType +
+                                    ". Valid values are: " + VALID_EXPERIMENT_TYPES,
+                            HttpServletResponse.SC_BAD_REQUEST);
+                }
+            }
+        }
+
+        // Validate metadata_profile if provided
+        if (updateRequest.getMetadataProfile() != null && updateRequest.getMetadataProfile().trim().isEmpty()) {
+            return new ValidationOutputData(false,
+                    "metadata_profile cannot be empty if provided",
+                    HttpServletResponse.SC_BAD_REQUEST);
         }
 
         // Validate recommendation settings if provided
@@ -153,85 +263,9 @@ public class BulkProfileValidation {
     }
 
     /**
-     * Validate cluster configurations
-     */
-    private static ValidationOutputData validateClusters(List<BulkProfile.Cluster> clusters) {
-        for (BulkProfile.Cluster cluster : clusters) {
-            // Validate cluster name
-            if (cluster.getClusterName() == null || cluster.getClusterName().trim().isEmpty()) {
-                return new ValidationOutputData(false,
-                        "cluster_name is required for each cluster",
-                        HttpServletResponse.SC_BAD_REQUEST);
-            }
-
-            // Validate datasources
-            if (cluster.getDatasources() == null || cluster.getDatasources().isEmpty()) {
-                return new ValidationOutputData(false,
-                        "At least one datasource is required for cluster: " + cluster.getClusterName(),
-                        HttpServletResponse.SC_BAD_REQUEST);
-            }
-
-            // Validate each datasource connection
-            for (String datasourceName : cluster.getDatasources()) {
-                String errorMessage = validateDatasourceConnection(datasourceName);
-                if (!errorMessage.isEmpty()) {
-                    return new ValidationOutputData(false, errorMessage, HttpServletResponse.SC_BAD_REQUEST);
-                }
-            }
-
-            // Validate namespaces if provided
-            if (cluster.getNamespaces() != null) {
-                for (String namespace : cluster.getNamespaces()) {
-                    if (namespace == null || namespace.trim().isEmpty()) {
-                        return new ValidationOutputData(false,
-                                "Empty namespace not allowed in cluster: " + cluster.getClusterName(),
-                                HttpServletResponse.SC_BAD_REQUEST);
-                    }
-                }
-            }
-
-            // Validate labels if provided
-            if (cluster.getLabels() != null) {
-                for (String key : cluster.getLabels().keySet()) {
-                    if (key == null || key.trim().isEmpty()) {
-                        return new ValidationOutputData(false,
-                                "Empty label key not allowed in cluster: " + cluster.getClusterName(),
-                                HttpServletResponse.SC_BAD_REQUEST);
-                    }
-                }
-            }
-
-            // Validate experiment_types
-            if (cluster.getExperimentTypes() == null || cluster.getExperimentTypes().isEmpty()) {
-                return new ValidationOutputData(false,
-                        "At least one experiment_type is required for cluster: " + cluster.getClusterName(),
-                        HttpServletResponse.SC_BAD_REQUEST);
-            }
-
-            for (String expType : cluster.getExperimentTypes()) {
-                if (!VALID_EXPERIMENT_TYPES.contains(expType)) {
-                    return new ValidationOutputData(false,
-                            "Invalid experiment_type: " + expType + " in cluster: " + cluster.getClusterName() +
-                                    ". Valid values are: " + VALID_EXPERIMENT_TYPES,
-                            HttpServletResponse.SC_BAD_REQUEST);
-                }
-            }
-
-            // Validate metadata_profile
-            if (cluster.getMetadataProfile() == null || cluster.getMetadataProfile().trim().isEmpty()) {
-                return new ValidationOutputData(false,
-                        "metadata_profile is required for cluster: " + cluster.getClusterName(),
-                        HttpServletResponse.SC_BAD_REQUEST);
-            }
-        }
-
-        return new ValidationOutputData(true, null, HttpServletResponse.SC_OK);
-    }
-
-    /**
      * Validate recommendation settings
      */
-    private static ValidationOutputData validateRecommendationSettings(BulkProfile.RecommendationSettings settings) {
+    private static ValidationOutputData validateRecommendationSettings(BulkConfig.RecommendationSettings settings) {
         // Validate scheduling
         if (settings.getScheduling() == null) {
             return new ValidationOutputData(false,
