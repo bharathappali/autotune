@@ -138,6 +138,20 @@ public class BulkConfigValidation {
                     HttpServletResponse.SC_BAD_REQUEST);
         }
 
+        // Validate metadata_profile exists in database
+        ValidationOutputData metadataProfileValidation = validateMetadataProfileExists(bulkConfig.getMetadataProfile());
+        if (!metadataProfileValidation.isSuccess()) {
+            return metadataProfileValidation;
+        }
+
+        // Validate performance_profile if provided
+        if (bulkConfig.getPerformanceProfile() != null && !bulkConfig.getPerformanceProfile().trim().isEmpty()) {
+            ValidationOutputData performanceProfileValidation = validatePerformanceProfileExists(bulkConfig.getPerformanceProfile());
+            if (!performanceProfileValidation.isSuccess()) {
+                return performanceProfileValidation;
+            }
+        }
+
         // Validate recommendation_settings
         if (bulkConfig.getRecommendationSettings() == null) {
             return new ValidationOutputData(false, "recommendation_settings is required", HttpServletResponse.SC_BAD_REQUEST);
@@ -235,10 +249,31 @@ public class BulkConfigValidation {
         }
 
         // Validate metadata_profile if provided
-        if (updateRequest.getMetadataProfile() != null && updateRequest.getMetadataProfile().trim().isEmpty()) {
-            return new ValidationOutputData(false,
-                    "metadata_profile cannot be empty if provided",
-                    HttpServletResponse.SC_BAD_REQUEST);
+        if (updateRequest.getMetadataProfile() != null) {
+            if (updateRequest.getMetadataProfile().trim().isEmpty()) {
+                return new ValidationOutputData(false,
+                        "metadata_profile cannot be empty if provided",
+                        HttpServletResponse.SC_BAD_REQUEST);
+            }
+            // Validate metadata_profile exists in database
+            ValidationOutputData metadataProfileValidation = validateMetadataProfileExists(updateRequest.getMetadataProfile());
+            if (!metadataProfileValidation.isSuccess()) {
+                return metadataProfileValidation;
+            }
+        }
+
+        // Validate performance_profile if provided
+        if (updateRequest.getPerformanceProfile() != null) {
+            if (updateRequest.getPerformanceProfile().trim().isEmpty()) {
+                return new ValidationOutputData(false,
+                        "performance_profile cannot be empty if provided",
+                        HttpServletResponse.SC_BAD_REQUEST);
+            }
+            // Validate performance_profile exists in database
+            ValidationOutputData performanceProfileValidation = validatePerformanceProfileExists(updateRequest.getPerformanceProfile());
+            if (!performanceProfileValidation.isSuccess()) {
+                return performanceProfileValidation;
+            }
         }
 
         // Validate recommendation settings if provided
@@ -349,6 +384,52 @@ public class BulkConfigValidation {
                     HttpServletResponse.SC_BAD_REQUEST);
         }
 
+        return new ValidationOutputData(true, null, HttpServletResponse.SC_OK);
+    }
+
+    /**
+     * Validate that metadata profile exists in database
+     */
+    private static ValidationOutputData validateMetadataProfileExists(String metadataProfileName) {
+        try {
+            ExperimentDBService dbService = new ExperimentDBService();
+            List<com.autotune.database.table.lm.KruizeLMMetadataProfileEntry> entries =
+                    dbService.loadMetadataProfileByName(metadataProfileName);
+            
+            if (entries == null || entries.isEmpty()) {
+                return new ValidationOutputData(false,
+                        "metadata_profile '" + metadataProfileName + "' does not exist. Please create it first using the createMetadataProfile API.",
+                        HttpServletResponse.SC_BAD_REQUEST);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error validating metadata_profile '{}': {}", metadataProfileName, e.getMessage());
+            return new ValidationOutputData(false,
+                    "Error validating metadata_profile: " + e.getMessage(),
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+        return new ValidationOutputData(true, null, HttpServletResponse.SC_OK);
+    }
+
+    /**
+     * Validate that performance profile exists in database
+     */
+    private static ValidationOutputData validatePerformanceProfileExists(String performanceProfileName) {
+        try {
+            ExperimentDBService dbService = new ExperimentDBService();
+            List<com.autotune.database.table.KruizePerformanceProfileEntry> entries =
+                    dbService.loadPerformanceProfileByName(performanceProfileName);
+            
+            if (entries == null || entries.isEmpty()) {
+                return new ValidationOutputData(false,
+                        "performance_profile '" + performanceProfileName + "' does not exist. Please create it first using the createPerformanceProfile API.",
+                        HttpServletResponse.SC_BAD_REQUEST);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error validating performance_profile '{}': {}", performanceProfileName, e.getMessage());
+            return new ValidationOutputData(false,
+                    "Error validating performance_profile: " + e.getMessage(),
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
         return new ValidationOutputData(true, null, HttpServletResponse.SC_OK);
     }
 
