@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.autotune.common.bulk;
 
+import com.autotune.analyzer.metadataProfiles.MetadataProfile;
+import com.autotune.analyzer.performanceProfiles.PerformanceProfile;
 import com.autotune.analyzer.serviceObjects.BulkConfig;
 import com.autotune.analyzer.serviceObjects.BulkConfigUpdateRequest;
 import com.autotune.common.data.ValidationOutputData;
@@ -22,6 +24,7 @@ import com.autotune.common.datasource.DataSourceInfo;
 import com.autotune.common.datasource.DataSourceOperatorImpl;
 import com.autotune.common.utils.CommonUtils;
 import com.autotune.database.service.ExperimentDBService;
+import com.autotune.database.table.lm.KruizeLMMetadataProfileEntry;
 import com.autotune.utils.KruizeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +32,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServletResponse;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Validation utility for Bulk Config API requests
@@ -393,10 +394,10 @@ public class BulkConfigValidation {
     private static ValidationOutputData validateMetadataProfileExists(String metadataProfileName) {
         try {
             ExperimentDBService dbService = new ExperimentDBService();
-            List<com.autotune.database.table.lm.KruizeLMMetadataProfileEntry> entries =
-                    dbService.loadMetadataProfileByName(metadataProfileName);
-            
-            if (entries == null || entries.isEmpty()) {
+            Map<String, MetadataProfile> metadataProfileMap = new HashMap<>();
+            dbService.loadMetadataProfileFromDBByName(metadataProfileMap, metadataProfileName);
+
+            if (!metadataProfileMap.containsKey(metadataProfileName)) {
                 return new ValidationOutputData(false,
                         "metadata_profile '" + metadataProfileName + "' does not exist. Please create it first using the createMetadataProfile API.",
                         HttpServletResponse.SC_BAD_REQUEST);
@@ -416,10 +417,10 @@ public class BulkConfigValidation {
     private static ValidationOutputData validatePerformanceProfileExists(String performanceProfileName) {
         try {
             ExperimentDBService dbService = new ExperimentDBService();
-            List<com.autotune.database.table.KruizePerformanceProfileEntry> entries =
-                    dbService.loadPerformanceProfileByName(performanceProfileName);
+            Map<String, PerformanceProfile> performanceProfileMap = new HashMap<>();
+            dbService.loadPerformanceProfileFromDBByName(performanceProfileMap, performanceProfileName);
             
-            if (entries == null || entries.isEmpty()) {
+            if (!performanceProfileMap.containsKey(performanceProfileName)) {
                 return new ValidationOutputData(false,
                         "performance_profile '" + performanceProfileName + "' does not exist. Please create it first using the createPerformanceProfile API.",
                         HttpServletResponse.SC_BAD_REQUEST);
