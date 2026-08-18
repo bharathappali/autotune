@@ -35,6 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -80,7 +81,7 @@ public class BulkConfigService extends HttpServlet {
         } catch (Exception e) {
             LOGGER.error("Error processing GET request: {}", e.getMessage(), e);
             sendErrorResponse(resp, out, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    "Internal server error: " + e.getMessage());
+                    "Internal server error");
         }
     }
 
@@ -115,6 +116,11 @@ public class BulkConfigService extends HttpServlet {
                 return;
             }
 
+            // Stamp creation and update timestamps before persisting
+            Instant now = Instant.now();
+            bulkConfig.setCreatedAt(now);
+            bulkConfig.setUpdatedAt(now);
+
             // Convert to database entity and save
             KruizeBulkConfigEntry configEntry = KruizeBulkConfigEntry.fromBulkConfig(bulkConfig);
             LOGGER.info("Saving bulk config '{}' to database", bulkConfig.getConfigName());
@@ -145,7 +151,7 @@ public class BulkConfigService extends HttpServlet {
         } catch (Exception e) {
             LOGGER.error("Error creating bulk config: {}", e.getMessage(), e);
             sendErrorResponse(resp, out, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    "Internal server error: " + e.getMessage());
+                    "Internal server error");
         }
     }
 
@@ -231,6 +237,9 @@ public class BulkConfigService extends HttpServlet {
                 return;
             }
 
+            // Stamp the update timestamp before persisting
+            existingConfig.setUpdatedAt(Instant.now());
+
             // Convert back to database entity and update
             KruizeBulkConfigEntry updatedEntry = KruizeBulkConfigEntry.fromBulkConfig(existingConfig);
 
@@ -255,7 +264,7 @@ public class BulkConfigService extends HttpServlet {
         } catch (Exception e) {
             LOGGER.error("Error updating bulk config: {}", e.getMessage(), e);
             sendErrorResponse(resp, out, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    "Internal server error: " + e.getMessage());
+                    "Internal server error");
         }
     }
 
@@ -301,7 +310,7 @@ public class BulkConfigService extends HttpServlet {
         } catch (Exception e) {
             LOGGER.error("Error deleting bulk config: {}", e.getMessage(), e);
             sendErrorResponse(resp, out, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    "Internal server error: " + e.getMessage());
+                    "Internal server error");
         }
     }
 

@@ -149,12 +149,16 @@ public class BulkConfigValidation {
             return metadataProfileValidation;
         }
 
-        // Validate performance_profile if provided
-        if (bulkConfig.getPerformanceProfile() != null && !bulkConfig.getPerformanceProfile().trim().isEmpty()) {
-            ValidationOutputData performanceProfileValidation = validatePerformanceProfileExists(bulkConfig.getPerformanceProfile());
-            if (!performanceProfileValidation.isSuccess()) {
-                return performanceProfileValidation;
-            }
+        // Validate performance_profile (required)
+        if (bulkConfig.getPerformanceProfile() == null || bulkConfig.getPerformanceProfile().trim().isEmpty()) {
+            return new ValidationOutputData(false,
+                    "performance_profile is required",
+                    HttpServletResponse.SC_BAD_REQUEST);
+        }
+
+        ValidationOutputData performanceProfileValidation = validatePerformanceProfileExists(bulkConfig.getPerformanceProfile());
+        if (!performanceProfileValidation.isSuccess()) {
+            return performanceProfileValidation;
         }
 
         // Validate recommendation_settings
