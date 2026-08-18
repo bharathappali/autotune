@@ -21,10 +21,7 @@ import com.autotune.analyzer.serviceObjects.BulkConfig;
 import com.autotune.analyzer.serviceObjects.BulkConfigUpdateRequest;
 import com.autotune.common.data.ValidationOutputData;
 import com.autotune.common.datasource.DataSourceInfo;
-import com.autotune.common.datasource.DataSourceOperatorImpl;
-import com.autotune.common.utils.CommonUtils;
 import com.autotune.database.service.ExperimentDBService;
-import com.autotune.database.table.lm.KruizeLMMetadataProfileEntry;
 import com.autotune.utils.KruizeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -443,33 +440,28 @@ public class BulkConfigValidation {
     }
 
     /**
-     * Validate datasource connection and reachability
-     * This method follows the same pattern as BulkServiceValidation.validateDatasourceConnection()
+     * Validate that a datasource exists in the database.
+     * Reachability is intentionally not checked here — a live HTTP probe to Prometheus
+     * on every POST/PUT would reject valid configs during maintenance windows and would
+     * block the servlet thread per datasource. Reachability is verified when the bulk
+     * job actually runs, which is the correct place.
      *
      * @param datasourceName The name of the datasource to validate
      * @return Empty string if valid, error message otherwise
      */
     public static String validateDatasourceConnection(String datasourceName) {
-        String errorMessage = "";
         try {
-            DataSourceInfo dataSourceInfo = null;
-            try {
-                dataSourceInfo = new ExperimentDBService().loadDataSourceFromDBByName(datasourceName);
-            } catch (Exception e) {
-                errorMessage = String.format(KruizeConstants.DataSourceConstants.DataSourceMetadataErrorMsgs.LOAD_DATASOURCE_FROM_DB_ERROR, datasourceName, e.getMessage());
-                LOGGER.error(errorMessage);
-                return errorMessage;
+            DataSourceInfo dataSourceInfo = new ExperimentDBService().loadDataSourceFromDBByName(datasourceName);
+            if (dataSourceInfo == null) {
+                return "Datasource '" + datasourceName + "' does not exist. Please register it first.";
             }
-            LOGGER.info(KruizeConstants.DataSourceConstants.DataSourceInfoMsgs.VERIFYING_DATASOURCE_REACHABILITY, datasourceName);
-            DataSourceOperatorImpl op = DataSourceOperatorImpl.getInstance().getOperator(KruizeConstants.SupportedDatasources.PROMETHEUS);
-            if (dataSourceInfo == null || op.isServiceable(dataSourceInfo) == CommonUtils.DatasourceReachabilityStatus.NOT_REACHABLE) {
-                errorMessage = KruizeConstants.DataSourceConstants.DataSourceErrorMsgs.DATASOURCE_NOT_SERVICEABLE;
-                LOGGER.error(errorMessage);
-            }
-        } catch (Exception ex) {
-            errorMessage = ex.getMessage();
+        } catch (Exception e) {
+            String errorMessage = String.format(
+                    KruizeConstants.DataSourceConstants.DataSourceMetadataErrorMsgs.LOAD_DATASOURCE_FROM_DB_ERROR,
+                    datasourceName, e.getMessage());
             LOGGER.error(errorMessage);
+            return errorMessage;
         }
-        return errorMessage;
+        return "";
     }
 }
