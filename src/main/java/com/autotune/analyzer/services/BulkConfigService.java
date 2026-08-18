@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2026 Red Hat, IBM Corporation and others.
+ * Copyright (c) 2026 IBM Corporation and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,7 +138,9 @@ public class BulkConfigService extends HttpServlet {
 
             LOGGER.info("Bulk config '{}' created successfully with scheduling: {}",
                     bulkConfig.getConfigName(),
-                    bulkConfig.getRecommendationSettings().getScheduling());
+                    bulkConfig.getRecommendationSettings() != null
+                            ? bulkConfig.getRecommendationSettings().getScheduling()
+                            : null);
 
         } catch (Exception e) {
             LOGGER.error("Error creating bulk config: {}", e.getMessage(), e);
@@ -220,6 +222,13 @@ public class BulkConfigService extends HttpServlet {
             }
             if (updateRequest.getWebhookUrl() != null) {
                 existingConfig.setWebhookUrl(updateRequest.getWebhookUrl());
+            }
+
+            // Re-validate the fully-updated config as a whole before persisting
+            ValidationOutputData fullValidation = BulkConfigValidation.validateCreate(existingConfig);
+            if (!fullValidation.isSuccess()) {
+                sendErrorResponse(resp, out, fullValidation.getErrorCode(), fullValidation.getMessage());
+                return;
             }
 
             // Convert back to database entity and update
@@ -342,12 +351,15 @@ public class BulkConfigService extends HttpServlet {
             client.setBaseURL(webhookUrl);
             GenericRestApiClient.HttpResponseWrapper response = client.callKruizeAPI(payload);
 
-            if (response != null && response.getStatusCode() == HttpServletResponse.SC_OK) {
+            int statusCode = response != null ? response.getStatusCode() : -1;
+            boolean isSuccessStatus = statusCode >= HttpServletResponse.SC_OK
+                    && statusCode < HttpServletResponse.SC_MULTIPLE_CHOICES;
+            if (isSuccessStatus) {
                 LOGGER.info("Webhook triggered successfully for config: {}, status: {}",
-                        config.getConfigName(), response.getStatusCode());
+                        config.getConfigName(), statusCode);
             } else {
-                LOGGER.warn("Webhook returned non-OK status for config: {}, status: {}",
-                        config.getConfigName(), response != null ? response.getStatusCode() : "null");
+                LOGGER.warn("Webhook returned non-success status for config: {}, status: {}",
+                        config.getConfigName(), response != null ? statusCode : "null");
             }
 
         } catch (Exception e) {

@@ -43,15 +43,19 @@ public class BulkConfigValidation {
 
     // Valid values for recommendation settings
     private static final Set<String> VALID_TERMS = new HashSet<>(Arrays.asList(
-            "short", "medium", "long"
+            KruizeConstants.JSONKeys.SHORT,
+            KruizeConstants.JSONKeys.MEDIUM,
+            KruizeConstants.JSONKeys.LONG
     ));
 
     private static final Set<String> VALID_MODELS = new HashSet<>(Arrays.asList(
-            "performance", "cost"
+            KruizeConstants.JSONKeys.PERFORMANCE,
+            KruizeConstants.JSONKeys.COST
     ));
 
     private static final Set<String> VALID_EXPERIMENT_TYPES = new HashSet<>(Arrays.asList(
-            "container", "namespace"
+            KruizeConstants.JSONKeys.CONTAINER,
+            KruizeConstants.JSONKeys.NAMESPACE
     ));
 
     // Regex pattern for scheduling format: number + unit (e.g., "24h", "30min", "7days")
