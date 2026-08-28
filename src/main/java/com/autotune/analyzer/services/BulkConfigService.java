@@ -217,11 +217,39 @@ public class BulkConfigService extends HttpServlet {
             if (updateRequest.getPerformanceProfile() != null) {
                 existingConfig.setPerformanceProfile(updateRequest.getPerformanceProfile());
             }
+            // Handle trial_settings with granular updates
             if (updateRequest.getTrialSettings() != null) {
-                existingConfig.setTrialSettings(updateRequest.getTrialSettings());
+                BulkConfig.TrialSettings existingTrialSettings = existingConfig.getTrialSettings();
+                BulkConfig.TrialSettings updateTrialSettings = updateRequest.getTrialSettings();
+                
+                // If existing trial_settings is null, use the update as-is
+                if (existingTrialSettings == null) {
+                    existingConfig.setTrialSettings(updateTrialSettings);
+                } else {
+                    // Only update the fields that are provided
+                    if (updateTrialSettings.getMeasurementDurationMinutes() != null) {
+                        existingTrialSettings.setMeasurementDurationMinutes(updateTrialSettings.getMeasurementDurationMinutes());
+                    }
+                    existingConfig.setTrialSettings(existingTrialSettings);
+                }
             }
+            // Handle recommendation_settings with granular updates
             if (updateRequest.getRecommendationSettings() != null) {
-                existingConfig.setRecommendationSettings(updateRequest.getRecommendationSettings());
+                BulkConfig.RecommendationSettings existingSettings = existingConfig.getRecommendationSettings();
+                BulkConfig.RecommendationSettings updateSettings = updateRequest.getRecommendationSettings();
+                
+                // Only update the fields that are provided
+                if (updateSettings.getScheduling() != null) {
+                    existingSettings.setScheduling(updateSettings.getScheduling());
+                }
+                if (updateSettings.getTerms() != null) {
+                    existingSettings.setTerms(updateSettings.getTerms());
+                }
+                if (updateSettings.getModels() != null) {
+                    existingSettings.setModels(updateSettings.getModels());
+                }
+                // Keep the updated settings
+                existingConfig.setRecommendationSettings(existingSettings);
             }
             if (updateRequest.getEnabled() != null) {
                 existingConfig.setEnabled(updateRequest.getEnabled());

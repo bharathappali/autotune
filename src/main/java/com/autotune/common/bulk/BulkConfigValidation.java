@@ -282,9 +282,9 @@ public class BulkConfigValidation {
             }
         }
 
-        // Validate recommendation settings if provided
+        // Validate recommendation settings if provided (partial validation for updates)
         if (updateRequest.getRecommendationSettings() != null) {
-            ValidationOutputData settingsValidation = validateRecommendationSettings(updateRequest.getRecommendationSettings());
+            ValidationOutputData settingsValidation = validateRecommendationSettings(updateRequest.getRecommendationSettings(), false);
             if (!settingsValidation.isSuccess()) {
                 return settingsValidation;
             }
@@ -303,48 +303,69 @@ public class BulkConfigValidation {
 
     /**
      * Validate recommendation settings
+     * For CREATE: all fields are required
+     * For UPDATE: only validate fields that are provided
      */
     private static ValidationOutputData validateRecommendationSettings(BulkConfig.RecommendationSettings settings) {
-        // Validate scheduling
-        if (settings.getScheduling() == null) {
+        return validateRecommendationSettings(settings, true);
+    }
+
+    /**
+     * Validate recommendation settings with option to require all fields
+     * @param settings The settings to validate
+     * @param requireAll If true, all fields are required (for CREATE). If false, only validate provided fields (for UPDATE)
+     */
+    private static ValidationOutputData validateRecommendationSettings(BulkConfig.RecommendationSettings settings, boolean requireAll) {
+        // Validate scheduling if provided or required
+        if (settings.getScheduling() != null) {
+            ValidationOutputData schedulingValidation = validateScheduling(settings.getScheduling());
+            if (!schedulingValidation.isSuccess()) {
+                return schedulingValidation;
+            }
+        } else if (requireAll) {
             return new ValidationOutputData(false,
                     "scheduling is required in recommendation_settings",
                     HttpServletResponse.SC_BAD_REQUEST);
         }
 
-        ValidationOutputData schedulingValidation = validateScheduling(settings.getScheduling());
-        if (!schedulingValidation.isSuccess()) {
-            return schedulingValidation;
-        }
-
-        // Validate terms
-        if (settings.getTerms() == null || settings.getTerms().isEmpty()) {
+        // Validate terms if provided or required
+        if (settings.getTerms() != null) {
+            if (settings.getTerms().isEmpty()) {
+                return new ValidationOutputData(false,
+                        "terms cannot be empty if provided in recommendation_settings",
+                        HttpServletResponse.SC_BAD_REQUEST);
+            }
+            for (String term : settings.getTerms()) {
+                if (!VALID_TERMS.contains(term)) {
+                    return new ValidationOutputData(false,
+                            "Invalid term: " + term + ". Valid values are: " + VALID_TERMS,
+                            HttpServletResponse.SC_BAD_REQUEST);
+                }
+            }
+        } else if (requireAll) {
             return new ValidationOutputData(false,
                     "At least one term is required in recommendation_settings",
                     HttpServletResponse.SC_BAD_REQUEST);
         }
 
-        for (String term : settings.getTerms()) {
-            if (!VALID_TERMS.contains(term)) {
+        // Validate models if provided or required
+        if (settings.getModels() != null) {
+            if (settings.getModels().isEmpty()) {
                 return new ValidationOutputData(false,
-                        "Invalid term: " + term + ". Valid values are: " + VALID_TERMS,
+                        "models cannot be empty if provided in recommendation_settings",
                         HttpServletResponse.SC_BAD_REQUEST);
             }
-        }
-
-        // Validate models
-        if (settings.getModels() == null || settings.getModels().isEmpty()) {
+            for (String model : settings.getModels()) {
+                if (!VALID_MODELS.contains(model)) {
+                    return new ValidationOutputData(false,
+                            "Invalid model: " + model + ". Valid values are: " + VALID_MODELS,
+                            HttpServletResponse.SC_BAD_REQUEST);
+                }
+            }
+        } else if (requireAll) {
             return new ValidationOutputData(false,
                     "At least one model is required in recommendation_settings",
                     HttpServletResponse.SC_BAD_REQUEST);
-        }
-
-        for (String model : settings.getModels()) {
-            if (!VALID_MODELS.contains(model)) {
-                return new ValidationOutputData(false,
-                        "Invalid model: " + model + ". Valid values are: " + VALID_MODELS,
-                        HttpServletResponse.SC_BAD_REQUEST);
-            }
         }
 
         return new ValidationOutputData(true, null, HttpServletResponse.SC_OK);
@@ -424,7 +445,7 @@ public class BulkConfigValidation {
             ExperimentDBService dbService = new ExperimentDBService();
             Map<String, PerformanceProfile> performanceProfileMap = new HashMap<>();
             dbService.loadPerformanceProfileFromDBByName(performanceProfileMap, performanceProfileName);
-            
+
             if (!performanceProfileMap.containsKey(performanceProfileName)) {
                 return new ValidationOutputData(false,
                         "performance_profile '" + performanceProfileName + "' does not exist. Please create it first using the createPerformanceProfile API.",
