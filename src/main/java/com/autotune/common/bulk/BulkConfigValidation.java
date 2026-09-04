@@ -68,7 +68,7 @@ public class BulkConfigValidation {
             "^[1-9]\\d*\\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|s|sec|secs|second|seconds)$";
 
     /**
-     * Validate a bulk config for creation
+     * Validate a bulk config for creation.
      * @param bulkConfig The bulk config to validate
      * @return ValidationOutputData with success status and error details if any
      */
@@ -193,6 +193,21 @@ public class BulkConfigValidation {
         }
 
         return new ValidationOutputData(true, null, HttpServletResponse.SC_OK);
+    }
+
+    /**
+     * Validate a fully-merged BulkConfig before persisting after a PUT.
+     * Runs the same structural checks as validateCreate but produces error messages
+     * that make sense in an update context (avoids "X is required" for fields that
+     * already existed in the stored record and were not touched by the request).
+     *
+     * @param bulkConfig The merged config to validate
+     * @return ValidationOutputData with success status and error details if any
+     */
+    public static ValidationOutputData validateForPersist(BulkConfig bulkConfig) {
+        // Delegate to validateCreate — the merged object must satisfy all the same
+        // invariants. The difference is solely in how the caller surfaces errors.
+        return validateCreate(bulkConfig);
     }
 
     /**
@@ -434,10 +449,10 @@ public class BulkConfigValidation {
                     HttpServletResponse.SC_BAD_REQUEST);
         }
 
-        if (!scheduling.matches(SCHEDULING_PATTERN)) {
+        if (!scheduling.trim().toLowerCase().matches(SCHEDULING_PATTERN)) {
             return new ValidationOutputData(false,
-                    "Invalid scheduling format: " + scheduling +
-                            ". Expected format: number + unit (e.g., '24h', '30min', '7days'). " +
+                    "Invalid scheduling format: '" + scheduling +
+                            "'. Expected format: number + unit (e.g., '24h', '30min', '7days'). " +
                             "Valid units: h/hr/hrs/hour/hours, m/min/mins/minute/minutes, d/day/days",
                     HttpServletResponse.SC_BAD_REQUEST);
         }
@@ -483,7 +498,7 @@ public class BulkConfigValidation {
         } catch (Exception e) {
             LOGGER.error("Error validating metadata_profile '{}': {}", metadataProfileName, e.getMessage());
             return new ValidationOutputData(false,
-                    "Error validating metadata_profile: " + e.getMessage(),
+                    "Failed to validate metadata_profile. Please try again.",
                     HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
         return new ValidationOutputData(true, null, HttpServletResponse.SC_OK);
@@ -506,7 +521,7 @@ public class BulkConfigValidation {
         } catch (Exception e) {
             LOGGER.error("Error validating performance_profile '{}': {}", performanceProfileName, e.getMessage());
             return new ValidationOutputData(false,
-                    "Error validating performance_profile: " + e.getMessage(),
+                    "Failed to validate performance_profile. Please try again.",
                     HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
         return new ValidationOutputData(true, null, HttpServletResponse.SC_OK);

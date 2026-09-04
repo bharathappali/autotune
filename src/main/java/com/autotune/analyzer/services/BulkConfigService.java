@@ -237,19 +237,23 @@ public class BulkConfigService extends HttpServlet {
             if (updateRequest.getRecommendationSettings() != null) {
                 BulkConfig.RecommendationSettings existingSettings = existingConfig.getRecommendationSettings();
                 BulkConfig.RecommendationSettings updateSettings = updateRequest.getRecommendationSettings();
-                
-                // Only update the fields that are provided
-                if (updateSettings.getScheduling() != null) {
-                    existingSettings.setScheduling(updateSettings.getScheduling());
+
+                // If there are no existing settings, use the incoming object as-is
+                if (existingSettings == null) {
+                    existingConfig.setRecommendationSettings(updateSettings);
+                } else {
+                    // Only overwrite the individual fields that were supplied
+                    if (updateSettings.getScheduling() != null) {
+                        existingSettings.setScheduling(updateSettings.getScheduling());
+                    }
+                    if (updateSettings.getTerms() != null && !updateSettings.getTerms().isEmpty()) {
+                        existingSettings.setTerms(updateSettings.getTerms());
+                    }
+                    if (updateSettings.getModels() != null && !updateSettings.getModels().isEmpty()) {
+                        existingSettings.setModels(updateSettings.getModels());
+                    }
+                    existingConfig.setRecommendationSettings(existingSettings);
                 }
-                if (updateSettings.getTerms() != null) {
-                    existingSettings.setTerms(updateSettings.getTerms());
-                }
-                if (updateSettings.getModels() != null) {
-                    existingSettings.setModels(updateSettings.getModels());
-                }
-                // Keep the updated settings
-                existingConfig.setRecommendationSettings(existingSettings);
             }
             if (updateRequest.getEnabled() != null) {
                 existingConfig.setEnabled(updateRequest.getEnabled());
@@ -258,8 +262,8 @@ public class BulkConfigService extends HttpServlet {
                 existingConfig.setWebhookUrl(updateRequest.getWebhookUrl());
             }
 
-            // Re-validate the fully-updated config as a whole before persisting
-            ValidationOutputData fullValidation = BulkConfigValidation.validateCreate(existingConfig);
+            // Re-validate the fully-merged config before persisting
+            ValidationOutputData fullValidation = BulkConfigValidation.validateForPersist(existingConfig);
             if (!fullValidation.isSuccess()) {
                 sendErrorResponse(resp, out, fullValidation.getErrorCode(), fullValidation.getMessage());
                 return;
