@@ -57,7 +57,7 @@ public class BulkConfigValidation {
 
     // Regex pattern for scheduling format: number + unit (e.g., "24h", "30min", "7days")
     // Supports: h, hr, hrs, hour, hours, m, min, mins, minute, minutes, d, day, days
-    private static final String SCHEDULING_PATTERN = "^\\d+\\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes|d|day|days)$";
+    private static final String SCHEDULING_PATTERN = "^[1-9]\\d*\\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes|d|day|days)$";
 
     // Regex pattern for measurement_duration: positive integer + time unit.
     // Unit vocabulary matches CommonUtils.getTimeUnit() exactly (case-insensitive comparison done before match):
