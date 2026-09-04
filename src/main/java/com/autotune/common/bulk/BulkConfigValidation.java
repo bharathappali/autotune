@@ -59,6 +59,14 @@ public class BulkConfigValidation {
     // Supports: h, hr, hrs, hour, hours, m, min, mins, minute, minutes, d, day, days
     private static final String SCHEDULING_PATTERN = "^\\d+\\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes|d|day|days)$";
 
+    // Regex pattern for measurement_duration: positive integer + time unit.
+    // Unit vocabulary matches CommonUtils.getTimeUnit() exactly (case-insensitive comparison done before match):
+    //   minutes : m, min, mins, minute, minutes
+    //   hours   : h, hr, hrs, hour, hours
+    //   seconds : s, sec, secs, second, seconds
+    private static final String MEASUREMENT_DURATION_PATTERN =
+            "^[1-9]\\d*\\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|s|sec|secs|second|seconds)$";
+
     /**
      * Validate a bulk config for creation
      * @param bulkConfig The bulk config to validate
@@ -156,6 +164,14 @@ public class BulkConfigValidation {
         ValidationOutputData performanceProfileValidation = validatePerformanceProfileExists(bulkConfig.getPerformanceProfile());
         if (!performanceProfileValidation.isSuccess()) {
             return performanceProfileValidation;
+        }
+
+        // Validate trial_settings if provided
+        if (bulkConfig.getTrialSettings() != null) {
+            ValidationOutputData trialSettingsValidation = validateTrialSettings(bulkConfig.getTrialSettings());
+            if (!trialSettingsValidation.isSuccess()) {
+                return trialSettingsValidation;
+            }
         }
 
         // Validate recommendation_settings
@@ -282,6 +298,14 @@ public class BulkConfigValidation {
             }
         }
 
+        // Validate trial_settings if provided
+        if (updateRequest.getTrialSettings() != null) {
+            ValidationOutputData trialSettingsValidation = validateTrialSettings(updateRequest.getTrialSettings());
+            if (!trialSettingsValidation.isSuccess()) {
+                return trialSettingsValidation;
+            }
+        }
+
         // Validate recommendation settings if provided (partial validation for updates)
         if (updateRequest.getRecommendationSettings() != null) {
             ValidationOutputData settingsValidation = validateRecommendationSettings(updateRequest.getRecommendationSettings(), false);
@@ -368,6 +392,34 @@ public class BulkConfigValidation {
                     HttpServletResponse.SC_BAD_REQUEST);
         }
 
+        return new ValidationOutputData(true, null, HttpServletResponse.SC_OK);
+    }
+
+    /**
+     * Validate trial settings.
+     * measurement_duration must be a positive integer followed by a recognised time unit,
+     * matching the same units accepted by CommonUtils.getTimeUnit():
+     *   minutes : m, min, mins, minute, minutes
+     *   hours   : h, hr, hrs, hour, hours
+     *   seconds : s, sec, secs, second, seconds
+     * Examples: "15min", "1h", "30s", "2hours"
+     */
+    private static ValidationOutputData validateTrialSettings(BulkConfig.TrialSettings trialSettings) {
+        String duration = trialSettings.getMeasurementDurationMinutes();
+        if (duration == null || duration.trim().isEmpty()) {
+            return new ValidationOutputData(false,
+                    "measurement_duration is required in trial_settings",
+                    HttpServletResponse.SC_BAD_REQUEST);
+        }
+        if (!duration.trim().toLowerCase().matches(MEASUREMENT_DURATION_PATTERN)) {
+            return new ValidationOutputData(false,
+                    "Invalid measurement_duration: '" + duration + "'. " +
+                            "Expected a positive integer followed by a time unit. " +
+                            "Valid units — minutes: m/min/mins/minute/minutes, " +
+                            "hours: h/hr/hrs/hour/hours, seconds: s/sec/secs/second/seconds " +
+                            "(e.g., '15min', '1h', '30s')",
+                    HttpServletResponse.SC_BAD_REQUEST);
+        }
         return new ValidationOutputData(true, null, HttpServletResponse.SC_OK);
     }
 
