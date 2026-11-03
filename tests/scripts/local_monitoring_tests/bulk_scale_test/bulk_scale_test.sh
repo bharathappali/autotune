@@ -17,12 +17,14 @@
 ### Script to run scale test with Kruize in local monitoring mode ##
 #
 
-CURRENT_DIR="$(dirname "$(realpath "$0")")"
-KRUIZE_REPO="${CURRENT_DIR}/../../../../"
+CURRENT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 
-
-# Source the common functions scripts
+# Source the common functions scripts (this file resets CURRENT_DIR/KRUIZE_REPO for its own layout)
 . ${CURRENT_DIR}/../../common/common_functions.sh
+
+# Restore paths relative to this script (repo root is four levels up from bulk_scale_test/)
+CURRENT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+KRUIZE_REPO="$(cd "${CURRENT_DIR}/../../../.." && pwd)"
 
 RESULTS_DIR=kruize_bulk_scale_test_results
 APP_NAME=kruize
