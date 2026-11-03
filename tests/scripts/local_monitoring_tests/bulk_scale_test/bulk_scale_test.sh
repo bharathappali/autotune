@@ -167,8 +167,9 @@ do
 done
 
 start_time=$(get_date)
-LOG_DIR="${RESULTS_DIR}/bulk-scale-test-$(date +%Y%m%d%H%M)"
-mkdir -p ${LOG_DIR}
+# Absolute path: kruize_local_config_patch and deploy run after pushd into KRUIZE_REPO.
+LOG_DIR="${CURRENT_DIR}/${RESULTS_DIR}/bulk-scale-test-$(date +%Y%m%d%H%M)"
+mkdir -p "${LOG_DIR}"
 
 LOG="${LOG_DIR}/bulk-scale-test.log"
 
