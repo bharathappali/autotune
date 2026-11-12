@@ -59,7 +59,8 @@ def parse_scale_dir(
     image: str,
     infra_setup_seconds: Optional[float] = None,
 ) -> Dict[str, Any]:
-    logs = sorted(log_dir.glob("*.log"))
+    # Client timings live under scale_logs/*.log; also scan top-level *.log.
+    logs = sorted(set(log_dir.glob("*.log")) | set(log_dir.glob("scale_logs/*.log")))
     per_log: List[Dict[str, Any]] = []
     totals = {
         "time_elapsed_seconds": 0.0,

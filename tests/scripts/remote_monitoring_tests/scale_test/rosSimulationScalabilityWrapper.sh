@@ -103,10 +103,32 @@ fi
 # Calculate the number of iterations based on interval and limit days
 iterations=$(( $limit_days * 24 / $interval_hours ))
 
+# Portable start-date arithmetic (GNU date -d breaks on macOS/BSD).
+scale_startdate_plus_hours() {
+    local base="$1"
+    local hours="$2"
+    python3 - "$base" "$hours" <<'PY'
+from datetime import datetime, timedelta, timezone
+import sys
+raw = sys.argv[1].replace("Z", "+00:00")
+hours = int(sys.argv[2])
+dt = datetime.fromisoformat(raw)
+if dt.tzinfo is None:
+    dt = dt.replace(tzinfo=timezone.utc)
+dt = dt.astimezone(timezone.utc) + timedelta(hours=hours)
+ms = dt.microsecond // 1000
+print(dt.strftime("%Y-%m-%dT%H:%M:%S.") + f"{ms:03d}Z")
+PY
+}
+
 # Loop for each iteration
 for (( i = 0; i < $iterations; i++ )); do
     # Calculate the current start date for this iteration
-    current_startdate=$(date -u -d "$initial_startdate + $(( i * interval_hours )) hours" +"%Y-%m-%dT%H:%M:%S.%3NZ")
+    current_startdate="$(scale_startdate_plus_hours "${initial_startdate}" "$(( i * interval_hours ))")"
+    if [[ -z "${current_startdate}" ]]; then
+        echo "ERROR: failed to compute startdate from ${initial_startdate} + $(( i * interval_hours ))h"
+        exit 1
+    fi
 
     # Build the full command
     full_command="python3 -u rosSimulationScalabilityTest.py --ip $ip --port $port --count $count --minutesjump $minutesjump --startdate $current_startdate --name ${name_prefix} --exptype ${exp_type} --api-version ${api_version}"
@@ -119,7 +141,12 @@ for (( i = 0; i < $iterations; i++ )); do
     wait
 
     echo "Collecting kruize metrics"
-    metrics_command="python3 ../../../../scripts/kruize_metrics.py -c openshift -s ${prometheus_server} -t 360m -e ${outputdir}/results -r kruizeMetrics-${client_thread}.csv --api-version ${api_version}"
+    metrics_ns="${KRUIZE_NAMESPACE:-${NAMESPACE:-}}"
+    metrics_ns_arg=""
+    if [[ -n "${metrics_ns}" ]]; then
+        metrics_ns_arg="-n ${metrics_ns}"
+    fi
+    metrics_command="python3 ../../../../scripts/kruize_metrics.py -c openshift -s ${prometheus_server} -t 360m -e ${outputdir}/results -r kruizeMetrics-${client_thread}.csv --api-version ${api_version} ${metrics_ns_arg}"
     eval "${metrics_command}" &
 
     # Sleep for a short duration to avoid flooding the system with too many requests
