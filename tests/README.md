@@ -109,3 +109,35 @@ Or with a specific operator image,
 ```
 <AUTOTUNE_REPO>/tests/test_autotune.sh -c minikube -o quay.io/kruize/kruize-operator:latest --testsuite=local_monitoring_tests --resultsdir=/home/results
 ```
+
+## Multi-instance remote monitoring (OpenShift)
+
+Run several Kruize CRC stacks in isolated namespaces without touching the shared `openshift-tuning` install.
+
+- Config is **YAML-only** ([`scripts/remote_monitoring_tests/instances.example.yaml`](scripts/remote_monitoring_tests/instances.example.yaml)); if `-f` is omitted the example file is used (`0.11.2` and `0.12`).
+- `namespace` is optional and defaults to `id`.
+- Preflight fails if any target namespace already exists — change the YAML.
+- Bare image tags resolve to `quay.io/kruize/autotune_operator:<tag>`; full refs (any registry) are used as-is.
+
+```
+# Results default to ./rm-multi-<N> (atomic mkdir claim; safe if two runs start together).
+# run_status starts as in_progress and becomes completed|failed when the run finishes.
+<AUTOTUNE_REPO>/tests/scripts/remote_monitoring_tests/run_multi_instance_rm.sh \
+  -c openshift --suite functional --testcase test_e2e
+
+# Scale (same rosSimulationScalabilityTest client as standalone; timings parsed from its logs):
+<AUTOTUNE_REPO>/tests/scripts/remote_monitoring_tests/run_multi_instance_rm.sh \
+  -c openshift --suite scale -- -u 50 -d 1 -n 2 -g 2
+
+# Or set an explicit results dir:
+<AUTOTUNE_REPO>/tests/scripts/remote_monitoring_tests/run_multi_instance_rm.sh \
+  -c openshift -r /tmp/rm-multi --suite functional --testcase test_e2e
+```
+
+Single-instance helper:
+
+```
+<AUTOTUNE_REPO>/tests/test_autotune.sh -c openshift --instance=rm-0-12 \
+  -i quay.io/kruize/autotune_operator:0.12 \
+  --testsuite=remote_monitoring_tests --testcase=test_e2e --resultsdir=/tmp/rm-0-12
+```

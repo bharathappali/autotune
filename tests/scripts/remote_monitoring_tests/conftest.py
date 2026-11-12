@@ -26,3 +26,7 @@ def pytest_addoption(parser):
     parser.addoption(
         '--cluster_type', action='store', default='minikube', help='Cluster type'
     )
+    parser.addoption(
+        '--namespace', action='store', default=None,
+        help='Kruize namespace (defaults via KRUIZE_NAMESPACE / KRUIZE_INSTANCE_ID / cluster defaults)'
+    )

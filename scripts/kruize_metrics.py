@@ -324,6 +324,7 @@ def main(argv):
     parser.add_argument('-r', '--resultsfile', help='Results file',default='kruizemetrics.csv')
     parser.add_argument('-e', '--outputdir', help='directory to store the results', default='results')
     parser.add_argument('--api-version', type=str, help='API version (v1/legacy)', default='legacy')
+    parser.add_argument('-n', '--namespace', help='Kruize namespace for DB metrics (default: openshift-tuning or monitoring)', default=None)
     #args = parser.parse_args()
     args, unknown = parser.parse_known_args()
 
@@ -351,10 +352,13 @@ def main(argv):
     use_new_api = args.api_version.lower() == 'v1'
     print("rosSimulationScalabilityTest :: api_version =", args.api_version)
 
-    if cluster_type == "openshift":
+    if args.namespace:
+        namespace = args.namespace
+    elif cluster_type == "openshift":
         namespace = "openshift-tuning"
     else:
         namespace = "monitoring"
+    print("kruize_metrics namespace =", namespace)
 
     queries_map = {
             "listRecommendations_count_success": f"sum(increase(kruizeAPI_count{{api=\"listRecommendations\",application=\"Kruize\",status=\"success\"}}[{time_duration}]))",

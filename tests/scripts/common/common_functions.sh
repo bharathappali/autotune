@@ -155,6 +155,26 @@ function install_python_requirements() {
 }
 
 # Set up autotune
+# Resolve Kruize deploy namespace. Honors KRUIZE_NAMESPACE / KRUIZE_INSTANCE_ID when set.
+function resolve_kruize_namespace() {
+	if [ -n "${KRUIZE_NAMESPACE:-}" ]; then
+		NAMESPACE="${KRUIZE_NAMESPACE}"
+	elif [ -n "${KRUIZE_INSTANCE_ID:-}" ]; then
+		NAMESPACE="${KRUIZE_INSTANCE_ID}"
+	else
+		case "${cluster_type}" in
+			openshift)
+				NAMESPACE="openshift-tuning"
+				;;
+			*)
+				NAMESPACE="monitoring"
+				;;
+		esac
+	fi
+	export NAMESPACE
+	export KRUIZE_NAMESPACE="${NAMESPACE}"
+}
+
 function setup() {
 	KRUIZE_POD_LOG=$1
 
@@ -173,14 +193,7 @@ function setup() {
 	deploy_autotune  "${cluster_type}" "${KRUIZE_DOCKER_IMAGE}" "${KRUIZE_POD_LOG}"
 	echo "Deploying autotune...Done"
 
-	case "${cluster_type}" in
-		minikube)
-			NAMESPACE="monitoring"
-			;;
-		openshift)
-			NAMESPACE="openshift-tuning"
-			;;
-	esac
+	resolve_kruize_namespace
 }
 
 # Check if the prometheus is already deployed , if not invoke the script to deploy prometheus on minikube
@@ -207,7 +220,11 @@ function deploy_autotune() {
 	fi
 
 	echo "Deploying autotune"
-	cmd="./deploy.sh -c ${cluster_type} -i ${KRUIZE_IMAGE} -m ${target}"
+	resolve_kruize_namespace
+	cmd="./deploy.sh -c ${cluster_type} -i ${KRUIZE_IMAGE} -m ${target} -n ${NAMESPACE}"
+	if [ -n "${KRUIZE_INSTANCE_ID:-}" ]; then
+		cmd="${cmd} --instance=${KRUIZE_INSTANCE_ID}"
+	fi
 	echo "Kruize deploy command - ${cmd}"
 	${cmd}
 
@@ -224,10 +241,8 @@ function deploy_autotune() {
 	if [[ ${cluster_type} == "minikube" || ${cluster_type} == "openshift" ]]; then
 		sleep 2
 		echo "Capturing Autotune service log into ${KRUIZE_POD_LOG}"
-		namespace="openshift-tuning"
-		if [ ${cluster_type} == "minikube" ]; then
-			namespace="monitoring"
-		fi
+		resolve_kruize_namespace
+		namespace="${NAMESPACE}"
 		echo "Namespace = $namespace"
 		service="kruize"
 		kruize_pod=$(kubectl get pod -n ${namespace} | grep ${service} | grep -v kruize-ui | grep -v kruize-db | cut -d " " -f1)
@@ -284,7 +299,11 @@ function autotune_cleanup() {
 		fi
 	else
 		# Standard cleanup using deploy scripts
-		cmd="./deploy.sh -c ${cluster_type} -m ${target} -t"
+		resolve_kruize_namespace
+		cmd="./deploy.sh -c ${cluster_type} -m ${target} -n ${NAMESPACE} -t"
+		if [ -n "${KRUIZE_INSTANCE_ID:-}" ]; then
+			cmd="${cmd} --instance=${KRUIZE_INSTANCE_ID}"
+		fi
 		echo "CMD = ${cmd}"
 		${cmd} >> ${KRUIZE_SETUP_LOG} 2>&1
 	fi
@@ -530,9 +549,9 @@ function form_curl_cmd() {
 	crud_operation=$1
 	# Form the curl command based on the cluster type
 	service="kruize"
+	resolve_kruize_namespace
 	case "${cluster_type}" in
 		openshift)
-			NAMESPACE="openshift-tuning"
 			oc expose svc/"${service}" -n "${NAMESPACE}"
 
 			SERVER_IP=$(oc status --namespace="${NAMESPACE}" \
@@ -546,8 +565,6 @@ function form_curl_cmd() {
 		;;
 
 		minikube)
-			NAMESPACE="monitoring"
-
 			echo "service = ${service} namespace = ${NAMESPACE}"
 			AUTOTUNE_PORT=$(kubectl -n "${NAMESPACE}" get svc "${service}" \
 				--no-headers -o=custom-columns=PORT:.spec.ports[*].nodePort)
@@ -558,7 +575,6 @@ function form_curl_cmd() {
 		;;
 
 		kind)
-			NAMESPACE="monitoring"
 			KIND_NODE_NAME="kind-control-plane"
 
 			echo "service = ${service} namespace = ${NAMESPACE}"

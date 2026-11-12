@@ -24,7 +24,17 @@ def get_kruize_url():
     return URL
 
 
-def form_kruize_url(cluster_type, SERVER_IP=None):
+def _default_kruize_namespace(cluster_type):
+    import os
+    ns = os.getenv("KRUIZE_NAMESPACE") or os.getenv("KRUIZE_INSTANCE_ID")
+    if ns:
+        return ns
+    if cluster_type == "openshift":
+        return "openshift-tuning"
+    return "monitoring"
+
+
+def form_kruize_url(cluster_type, SERVER_IP=None, namespace=None):
     global URL
 
     if SERVER_IP != None:
@@ -32,13 +42,15 @@ def form_kruize_url(cluster_type, SERVER_IP=None):
         print("\nKRUIZE AUTOTUNE URL = ", URL)
         return
 
+    ns = namespace or _default_kruize_namespace(cluster_type)
+
     if (cluster_type == "local"):
         AUTOTUNE_PORT = 8080
         SERVER_IP = '127.0.0.1'
         URL = "http://" + str(SERVER_IP) + ":" + str(AUTOTUNE_PORT)
     if (cluster_type == "minikube"):
         port = subprocess.run(
-            ['kubectl -n monitoring get svc kruize --no-headers -o=custom-columns=PORT:.spec.ports[*].nodePort'],
+            [f'kubectl -n {ns} get svc kruize --no-headers -o=custom-columns=PORT:.spec.ports[*].nodePort'],
             shell=True, stdout=subprocess.PIPE)
 
         AUTOTUNE_PORT = port.stdout.decode('utf-8').strip('\n')
@@ -49,7 +61,7 @@ def form_kruize_url(cluster_type, SERVER_IP=None):
 
     elif cluster_type == "kind":
             port = subprocess.run(
-                ['kubectl get svc kruize -n monitoring -o jsonpath="{.spec.ports[0].nodePort}"'],
+                [f'kubectl get svc kruize -n {ns} -o jsonpath="{{.spec.ports[0].nodePort}}"'],
                 shell=True, stdout=subprocess.PIPE)
 
             AUTOTUNE_PORT = port.stdout.decode('utf-8').strip('\n')
@@ -61,10 +73,10 @@ def form_kruize_url(cluster_type, SERVER_IP=None):
 
     elif (cluster_type == "openshift"):
 
-        subprocess.run(['oc expose svc/kruize -n openshift-tuning'], shell=True, stdout=subprocess.PIPE)
+        subprocess.run([f'oc expose svc/kruize -n {ns}'], shell=True, stdout=subprocess.PIPE)
         ip = subprocess.run(
             [
-                'oc status -n openshift-tuning | grep "kruize" | grep -v "kruize-ui" | grep -v "kruize-db" | grep port | cut -d " " -f1 | cut -d "/" -f3'],
+                f'oc status -n {ns} | grep "kruize" | grep -v "kruize-ui" | grep -v "kruize-db" | grep port | cut -d " " -f1 | cut -d "/" -f3'],
             shell=True,
             stdout=subprocess.PIPE)
         SERVER_IP = ip.stdout.decode('utf-8').strip('\n')
@@ -72,6 +84,7 @@ def form_kruize_url(cluster_type, SERVER_IP=None):
         URL = "http://" + str(SERVER_IP)
 
     print("\nKRUIZE AUTOTUNE URL = ", URL)
+    print("KRUIZE NAMESPACE = ", ns)
 
 
 # Description: This function validates the input json and posts the experiment using createExperiment API to Kruize Autotune

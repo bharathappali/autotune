@@ -76,6 +76,34 @@ cd <KRUIZE_REPO>/tests/scripts/remote_monitoring_tests/scale_test
 
 ```
 
+### Isolated multi-instance scale (does not touch `openshift-tuning`)
+
+Use `--instance=<id>` so CRC is deployed into namespace `<id>` (or `--namespace=<ns>`) with unique ClusterRole/CRB/PV names. The load client [`rosSimulationScalabilityTest.py`](scale_test/rosSimulationScalabilityTest.py) is **unchanged** (same closed-loop timings as standalone runs).
+
+```
+cd <KRUIZE_REPO>/tests/scripts/remote_monitoring_tests/scale_test
+./remote_monitoring_scale_test_bulk.sh --instance=rm-0-12 \
+  -i quay.io/kruize/autotune_operator:0.12 \
+  -u 250 -d 2 -n 5 -g 2 -r /tmp/scale_rm-0-12
+```
+
+### Multi-instance YAML orchestrator
+
+YAML-only runner (default file: [`instances.example.yaml`](instances.example.yaml) with `0.11.2` and `0.12`). Preflight **aborts** if any target namespace already exists.
+
+```
+cd <KRUIZE_REPO>/tests/scripts/remote_monitoring_tests
+# -r omitted → atomically create ./rm-multi-<N> (mkdir claim; concurrent runs get different N)
+# Each results dir has run_status: in_progress → completed|failed
+./run_multi_instance_rm.sh -c openshift --suite scale -- -u 50 -d 1 -n 2 -g 2
+# or functional:
+./run_multi_instance_rm.sh -c openshift --suite functional --testcase test_e2e
+```
+
+Artifacts: `<results>/<id>/kruize_stats.json` (scale timings **parsed** from existing client logs), `<results>/comparison.csv`, `<results>/comparison.md`. Optional `--cleanup` removes only instance namespaces/objects — never `openshift-tuning`.
+
+**Note:** Scale client timings are closed-loop batch metrics (same as historical scale_test). They are not open-loop / coordinated-omission-corrected latency percentiles.
+
 Once the tests are complete, manually check the logs for any exceptions or errors or crashes. Verify if the execution times captured in exec_time.log are as expected.
 
 Below commands are used in the script to capture the execution time and the count of experiments and results from the database:

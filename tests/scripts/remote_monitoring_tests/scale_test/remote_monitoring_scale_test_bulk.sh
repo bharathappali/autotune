@@ -31,7 +31,8 @@ CLUSTER_TYPE=openshift
 DEPLOYMENT_NAME=kruize
 CONTAINER_NAME=kruize
 EXP_TYPE=container
-NAMESPACE=openshift-tuning
+NAMESPACE="${KRUIZE_NAMESPACE:-}"
+KRUIZE_INSTANCE_ID="${KRUIZE_INSTANCE_ID:-}"
 num_exps=5000
 num_days_of_res=15
 num_clients=20
@@ -54,16 +55,22 @@ total_results_count=0
 
 function usage() {
 	echo
-	echo "Usage: [-i Kruize image] [-u No. of experiments (default - 5000)] [-d No. of days of results (default - 15)] [-n No. of clients (default - 20)] [-m results duration interval in mins, (default - 15)] [-t interval hours (default - 6)] [-s Initial start date (default - 2023-01-10T00:00:00.000Z)] [-q query db interval in mins, (default - 10)] [-r <resultsdir path>] [-l restore DB (default - false)] [-f DB file path to restore (default - ./db_backup.sql)] [-b kruize setup (default - true)] [-c Experiment type [container|namespace|container_ns|gpucontainer] (default - container)] [-a Test case (default - scale_5k)] [-g No. of kruize replicas. Default - 10] [--api-version=<v1|legacy>]"
+	echo "Usage: [-i Kruize image] [-u No. of experiments (default - 5000)] [-d No. of days of results (default - 15)] [-n No. of clients (default - 20)] [-m results duration interval in mins, (default - 15)] [-t interval hours (default - 6)] [-s Initial start date (default - 2023-01-10T00:00:00.000Z)] [-q query db interval in mins, (default - 10)] [-r <resultsdir path>] [-l restore DB (default - false)] [-f DB file path to restore (default - ./db_backup.sql)] [-b kruize setup (default - true)] [-c Experiment type [container|namespace|container_ns|gpucontainer] (default - container)] [-a Test case (default - scale_5k)] [-g No. of kruize replicas. Default - 10] [--api-version=<v1|legacy>] [--instance=<id>] [--namespace=<ns>]"
 	echo
 	echo "API Version Parameter:"
 	echo "  --api-version=v1      Use NEW v1 API (/kruize/api/v1/recommendations)"
 	echo "  --api-version=legacy  Use OLD/LEGACY APIs (/updateRecommendations, /generateRecommendations)"
 	echo "  Default: legacy (if no parameter specified)"
 	echo
+	echo "Instance isolation (OpenShift multi-NS):"
+	echo "  --instance=<id>   Isolated CRC stack; namespace defaults to <id>; refuses openshift-tuning"
+	echo "  --namespace=<ns>  Override deploy namespace (with --instance)"
+	echo "  -n                Number of client threads (unchanged; not a Kubernetes namespace)"
+	echo
 	echo "Examples:"
 	echo "  ./remote_monitoring_scale_test_bulk.sh -u 1000 -d 7                    # Uses legacy API (default)"
 	echo "  ./remote_monitoring_scale_test_bulk.sh -u 1000 -d 7 --api-version=v1  # Uses new v1 API"
+	echo "  ./remote_monitoring_scale_test_bulk.sh --instance=rm-0-12 -i quay.io/kruize/autotune_operator:0.12 -u 250 -d 2 -n 5 -g 2"
 	exit -1
 }
 
@@ -96,24 +103,25 @@ function get_kruize_service_log() {
 
 #
 # Switch to default values for isROSEnabled & local flags in the code (isROSEnabled is true for RM)
+# When INSTANCE_MANIFEST is set, patch that copy only (never the git-tracked stock file).
 #
 function kruize_scale_test_remote_patch() {
 	CRC_DIR="./manifests/crc/default-db-included-installation"
-	KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT="${CRC_DIR}/openshift/kruize-crc-openshift.yaml"
+	local manifest="${1:-${CRC_DIR}/openshift/kruize-crc-openshift.yaml}"
 
-	sed -i -E 's/"isROSEnabled": "false",?\s*//g; s/"local": "true",?\s*//g'  "${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}"
-	sed -i 's/\([[:space:]]*\)\(storage:\)[[:space:]]*[0-9]\+Mi/\1\2 1Gi/' "${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}"
+	sed -i -E 's/"isROSEnabled": "false",?\s*//g; s/"local": "true",?\s*//g'  "${manifest}"
+	sed -i 's/\([[:space:]]*\)\(storage:\)[[:space:]]*[0-9]\+Mi/\1\2 1Gi/' "${manifest}"
 	if [ ${testcase} == "migration" ]; then
-	        sed -i 's/\([[:space:]]*\)\(memory:\)[[:space:]]*".*"/\1\2 "2Gi"/; s/\([[:space:]]*\)\(cpu:\)[[:space:]]*".*"/\1\2 "2"/' "${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}"
+	        sed -i 's/\([[:space:]]*\)\(memory:\)[[:space:]]*".*"/\1\2 "2Gi"/; s/\([[:space:]]*\)\(cpu:\)[[:space:]]*".*"/\1\2 "2"/' "${manifest}"
 	else
 		# Replace memory requests and limits for Kruize to 4Gi and 8Gi respectively for scale test
-		sed -i '/- name: kruize$/,/ports:/{/requests:/,/limits:/{/memory:/s/"[^"]*"/"4Gi"/}; /limits:/,/ports:/{/memory:/s/"[^"]*"/"8Gi"/}}' "${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}"
+		sed -i '/- name: kruize$/,/ports:/{/requests:/,/limits:/{/memory:/s/"[^"]*"/"4Gi"/}; /limits:/,/ports:/{/memory:/s/"[^"]*"/"8Gi"/}}' "${manifest}"
 
 		# Replace memory requests and limits for Kruize DB to 10Gi and 30 Gi respectively for scale test
-		sed -i '/- name: kruize-db$/,/ports:/{/requests:/,/limits:/{/memory:/s/"[^"]*"/"10Gi"/}; /limits:/,/ports:/{/memory:/s/"[^"]*"/"30Gi"/}}' "${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}"
+		sed -i '/- name: kruize-db$/,/ports:/{/requests:/,/limits:/{/memory:/s/"[^"]*"/"10Gi"/}; /limits:/,/ports:/{/memory:/s/"[^"]*"/"30Gi"/}}' "${manifest}"
 
-                sed -i 's/\([[:space:]]*\)\(cpu:\)[[:space:]]*".*"/\1\2 "2"/' "${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}"
-                cp "${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}" "${LOG_DIR}"
+                sed -i 's/\([[:space:]]*\)\(cpu:\)[[:space:]]*".*"/\1\2 "2"/' "${manifest}"
+                cp "${manifest}" "${LOG_DIR}"
 	fi
 
 }
@@ -125,6 +133,12 @@ do
 		case "${OPTARG}" in
 			api-version=*)
 				api_version=${OPTARG#*=}
+				;;
+			instance=*)
+				KRUIZE_INSTANCE_ID=${OPTARG#*=}
+				;;
+			namespace=*)
+				NAMESPACE=${OPTARG#*=}
 				;;
 		esac
 		;;
@@ -188,6 +202,25 @@ if [ -z "${api_version}" ]; then
   api_version="legacy"
 fi
 
+if [ -n "${KRUIZE_INSTANCE_ID}" ]; then
+	if [ -z "${NAMESPACE}" ]; then
+		NAMESPACE="${KRUIZE_INSTANCE_ID}"
+	fi
+	if [ "${NAMESPACE}" = "openshift-tuning" ] || [ "${KRUIZE_INSTANCE_ID}" = "openshift-tuning" ]; then
+		echo "ERROR: --instance must not target openshift-tuning"
+		exit 1
+	fi
+	export KRUIZE_INSTANCE_ID
+	export KRUIZE_NAMESPACE="${NAMESPACE}"
+	export NAMESPACE
+else
+	if [ -z "${NAMESPACE}" ]; then
+		NAMESPACE="openshift-tuning"
+	fi
+	export NAMESPACE
+	export KRUIZE_NAMESPACE="${NAMESPACE}"
+fi
+
 start_time=$(get_date)
 LOG_DIR="${RESULTS_DIR}/remote-monitoring-scale-test-$(date +%Y%m%d%H%M)"
 mkdir -p ${LOG_DIR}
@@ -210,13 +243,24 @@ if [ ${kruize_setup} == true ]; then
 	echo "Removing isROSEnabled=false and local=true"
 	cluster_type=${CLUSTER_TYPE}
 	pushd ${KRUIZE_REPO_PATH} > /dev/null
-		kruize_scale_test_remote_patch
-        	echo "./deploy.sh -c ${CLUSTER_TYPE} -i ${KRUIZE_IMAGE} -m ${target} -t >> ${KRUIZE_SETUP_LOG}" | tee -a ${LOG}
-		./deploy.sh -c ${CLUSTER_TYPE} -i ${KRUIZE_IMAGE} -m ${target} -t >> ${KRUIZE_SETUP_LOG} 2>&1
+		deploy_extra_args=""
+		if [ -n "${KRUIZE_INSTANCE_ID}" ]; then
+			gen_script="./scripts/generate_crc_instance_manifest.sh"
+			instance_manifest="${LOG_DIR}/kruize-crc-${KRUIZE_INSTANCE_ID}.yaml"
+			"${gen_script}" --instance "${KRUIZE_INSTANCE_ID}" --namespace "${NAMESPACE}" --out "${instance_manifest}"
+			kruize_scale_test_remote_patch "${instance_manifest}"
+			export KRUIZE_CRC_INSTANCE_MANIFEST="${instance_manifest}"
+			export KRUIZE_INSTANCE_MANIFEST_DIR="${LOG_DIR}"
+			deploy_extra_args="-n ${NAMESPACE} --instance=${KRUIZE_INSTANCE_ID}"
+		else
+			kruize_scale_test_remote_patch
+		fi
+        	echo "./deploy.sh -c ${CLUSTER_TYPE} -i ${KRUIZE_IMAGE} -m ${target} ${deploy_extra_args} -t >> ${KRUIZE_SETUP_LOG}" | tee -a ${LOG}
+		./deploy.sh -c ${CLUSTER_TYPE} -i ${KRUIZE_IMAGE} -m ${target} ${deploy_extra_args} -t >> ${KRUIZE_SETUP_LOG} 2>&1
 
         	sleep 30
-	        echo "./deploy.sh -c ${CLUSTER_TYPE} -i ${KRUIZE_IMAGE} -m ${target} >> ${KRUIZE_SETUP_LOG}" | tee -a ${LOG}
-        	./deploy.sh -c ${CLUSTER_TYPE} -i ${KRUIZE_IMAGE} -m ${target} >> ${KRUIZE_SETUP_LOG} 2>&1 &
+	        echo "./deploy.sh -c ${CLUSTER_TYPE} -i ${KRUIZE_IMAGE} -m ${target} ${deploy_extra_args} >> ${KRUIZE_SETUP_LOG}" | tee -a ${LOG}
+        	./deploy.sh -c ${CLUSTER_TYPE} -i ${KRUIZE_IMAGE} -m ${target} ${deploy_extra_args} >> ${KRUIZE_SETUP_LOG} 2>&1 &
 	        sleep 120
 
 		# scale kruize pods
@@ -256,8 +300,9 @@ fi
 echo ""
 echo "Running scale test for kruize on ${CLUSTER_TYPE}" | tee -a ${LOG}
 echo ""
+echo "Using NAMESPACE=${NAMESPACE} for scale DB checks and route" | tee -a ${LOG}
 echo "nohup ./run_bulk_scalability_test.sh -c "${CLUSTER_TYPE}" -f "${EXP_TYPE}" -a "${SERVER_IP_ADDR}" -p "${port}" -u "${num_exps}" -d "${num_days_of_res}" -n "${num_clients}" -m "${minutes_jump}" -i "${interval_hours}" -s "${initial_start_date}" -q "${query_db_interval}" -r "${LOG_DIR}" -e "${total_results_count}" --api-version="${api_version}" > >(tee -a ${LOG}) 2>&1 &"
-nohup ./run_bulk_scalability_test.sh -c "${CLUSTER_TYPE}" -f "${EXP_TYPE}" -a "${SERVER_IP_ADDR}" -p "${port}" -u "${num_exps}" -d "${num_days_of_res}" -n "${num_clients}" -m "${minutes_jump}" -i "${interval_hours}" -s "${initial_start_date}" -q "${query_db_interval}" -r "${LOG_DIR}" -e "${total_results_count}" --api-version="${api_version}" > >(tee -a ${LOG}) 2>&1 &
+KRUIZE_NAMESPACE="${NAMESPACE}" NAMESPACE="${NAMESPACE}" nohup ./run_bulk_scalability_test.sh -c "${CLUSTER_TYPE}" -f "${EXP_TYPE}" -a "${SERVER_IP_ADDR}" -p "${port}" -u "${num_exps}" -d "${num_days_of_res}" -n "${num_clients}" -m "${minutes_jump}" -i "${interval_hours}" -s "${initial_start_date}" -q "${query_db_interval}" -r "${LOG_DIR}" -e "${total_results_count}" --api-version="${api_version}" > >(tee -a ${LOG}) 2>&1 &
 
 wait $!
 

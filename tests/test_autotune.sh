@@ -34,12 +34,15 @@ resultsdir="${CURRENT_DIR}"
 # usage of the test script
 function usage() {
 	echo ""
-	echo "Usage: $0 -c [minikube] [-t terminate or cleanup kruize] [-i autotune image] [-o [operator image]] [--testsuite=Group of tests that you want to perform] [--testcase=Particular test case that you want to check] [--resultsdir=results directory] [--skipsetup specifying this flag skips autotune setup] [--cleanup_prometheus specifying this flag along with -t option cleans up prometheus setup] [--api-version=API version to use (v1 or legacy)]"
+	echo "Usage: $0 -c [minikube|openshift|kind] [-t terminate or cleanup kruize] [-i autotune image] [-o [operator image]] [-n namespace] [--instance=<id>] [--testsuite=...] [--testcase=...] [--resultsdir=...] [--skipsetup] [--cleanup_prometheus] [--api-version=v1|legacy]"
 	echo ""
 	echo "Example: $0 -c minikube --testsuite=remote_monitoring_tests --resultsdir=/home/results"
+	echo "Example: $0 -c openshift --instance=rm-0-12 -i quay.io/kruize/autotune_operator:0.12 --testsuite=remote_monitoring_tests --testcase=test_e2e"
 	echo "Example: $0 -c minikube --testsuite=local_monitoring_tests -o"
-	echo "Example: $0 -c minikube --testsuite=local_monitoring_tests -o quay.io/kruize/kruize_operator:latest"
 	echo "Example: $0 -c minikube --testsuite=remote_monitoring_tests --api-version=legacy"
+	echo ""
+	echo "  --instance=<id>  Isolated CRC install (OpenShift). Namespace defaults to <id> unless -n is set."
+	echo "                   Refuses openshift-tuning. Never touches the shared openshift-tuning install."
 	echo ""
 	test_suite_usage
 	echo ""
@@ -96,7 +99,7 @@ function check_testsuite_type() {
 }
 
 # Iterate through the commandline options
-while getopts c:ti:os:-: gopts
+while getopts c:ti:osn:-: gopts
 do
 	case ${gopts} in
 	-)
@@ -120,6 +123,10 @@ do
 		  api-version=*)
 				api_version=${OPTARG#*=}
 				;;
+			instance=*)
+				KRUIZE_INSTANCE_ID=${OPTARG#*=}
+				export KRUIZE_INSTANCE_ID
+				;;
 			skipsetup)
 				skip_setup=1
 				;;
@@ -139,6 +146,10 @@ do
 		;;
 	i)
 		KRUIZE_DOCKER_IMAGE="${OPTARG}"
+		;;
+	n)
+		KRUIZE_NAMESPACE="${OPTARG}"
+		export KRUIZE_NAMESPACE
 		;;
 	o)
 		USE_OPERATOR=1
@@ -160,6 +171,18 @@ do
 		usage
 	esac
 done
+
+# Instance mode: namespace defaults to instance id; never allow openshift-tuning
+if [ -n "${KRUIZE_INSTANCE_ID:-}" ]; then
+	if [ -z "${KRUIZE_NAMESPACE:-}" ]; then
+		KRUIZE_NAMESPACE="${KRUIZE_INSTANCE_ID}"
+		export KRUIZE_NAMESPACE
+	fi
+	if [ "${KRUIZE_NAMESPACE}" = "openshift-tuning" ] || [ "${KRUIZE_INSTANCE_ID}" = "openshift-tuning" ]; then
+		echo "Error: --instance must not target openshift-tuning"
+		exit -1
+	fi
+fi
 
 # Check if the cluster type is supported
 check_cluster_type

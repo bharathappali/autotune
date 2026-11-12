@@ -120,12 +120,8 @@ function remote_monitoring_tests() {
 				sleep 60
 				# Scale up Kruize deployment to 3 replicas for simulate_prod test
 				if [ "${test}" == "simulate_prod" ]; then
-					# Determine namespace based on cluster type
-					if [ "${cluster_type}" == "openshift" ]; then
-						KRUIZE_NAMESPACE="openshift-tuning"
-					else
-						KRUIZE_NAMESPACE="monitoring"
-					fi
+					resolve_kruize_namespace
+					KRUIZE_NAMESPACE="${NAMESPACE}"
 
 					# create performance profile v1
           create_performance_profile "${perf_profile_json_v1}"
@@ -161,8 +157,13 @@ function remote_monitoring_tests() {
 		popd > /dev/null
 
 		pushd ${REMOTE_MONITORING_TEST_DIR}/rest_apis > /dev/null
-			echo "pytest -m ${test} --junitxml=${TEST_DIR}/report-${test}.xml --html=${TEST_DIR}/report-${test}.html --cluster_type ${cluster_type}"
-			pytest -m ${test} --junitxml=${TEST_DIR}/report-${test}.xml --html=${TEST_DIR}/report-${test}.html --cluster_type ${cluster_type} | tee -a ${LOG}
+			resolve_kruize_namespace
+			pytest_ns_args=""
+			if [ -n "${NAMESPACE}" ]; then
+				pytest_ns_args="--namespace ${NAMESPACE}"
+			fi
+			echo "pytest -m ${test} --junitxml=${TEST_DIR}/report-${test}.xml --html=${TEST_DIR}/report-${test}.html --cluster_type ${cluster_type} ${pytest_ns_args}"
+			pytest -m ${test} --junitxml=${TEST_DIR}/report-${test}.xml --html=${TEST_DIR}/report-${test}.html --cluster_type ${cluster_type} ${pytest_ns_args} | tee -a ${LOG}
 			err_exit "ERROR: Running the test using pytest failed, check ${LOG} for details!"
 
 		popd > /dev/null
@@ -170,12 +171,8 @@ function remote_monitoring_tests() {
 		pushd "${KRUIZE_REPO}" > /dev/null
 			# Scale down Kruize deployment back to 1 replica after simulate_prod test
 			if [ "${test}" == "simulate_prod" ]; then
-				# Determine namespace based on cluster type
-				if [ "${cluster_type}" == "openshift" ]; then
-					KRUIZE_NAMESPACE="openshift-tuning"
-				else
-					KRUIZE_NAMESPACE="monitoring"
-				fi
+				resolve_kruize_namespace
+				KRUIZE_NAMESPACE="${NAMESPACE}"
 				
 				echo "Scaling Kruize deployment back to 1 replica in namespace ${KRUIZE_NAMESPACE}..." | tee -a ${LOG}
 				kubectl scale deployment kruize --replicas=1 -n ${KRUIZE_NAMESPACE} 2>&1 | tee -a ${LOG}

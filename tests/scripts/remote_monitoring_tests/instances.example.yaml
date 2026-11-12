@@ -1,0 +1,13 @@
+# Default multi-instance RM config.
+# Bare tags resolve to quay.io/kruize/autotune_operator:<tag>
+# Optional: default_image_repo: quay.io/kruize/autotune_operator
+#
+# namespace is optional; when omitted it equals id.
+# Preflight refuses to run if any target namespace already exists.
+
+instances:
+  - id: rm-0-11-2
+    image: "0.11.2"
+
+  - id: rm-0-12
+    image: "0.12"

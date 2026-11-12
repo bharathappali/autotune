@@ -90,6 +90,24 @@ check_err() {
 	fi
 }
 
+# Apply image overrides onto a manifest copy (never mutate the caller's base in-place permanently)
+_kruize_crc_apply_images() {
+	local src_manifest="$1"
+	local dst_manifest="$2"
+	awk -v image_name="${AUTOTUNE_DOCKER_IMAGE}" -v ui_image_name="${KRUIZE_UI_DOCKER_IMAGE}" '{
+			if ($2=="name:") {
+				prev=$3;
+				print
+			} else if ($1=="image:" && prev=="kruize") {
+				$2=image_name;
+				printf"          %s %s\n", $1, $2;
+			} else if ($1=="image:" && prev=="kruize-ui-nginx-container") {
+				$2=ui_image_name;
+				printf"          %s %s\n", $1, $2;
+			} else { print }
+		 }' "${src_manifest}" >"${dst_manifest}"
+}
+
 # Deploy kruize in remote monitoring mode with the specified docker image
 kruize_crc_start() {
 	kubectl_cmd="kubectl -n ${autotune_ns}"
@@ -100,52 +118,84 @@ kruize_crc_start() {
 	if [ "${cluster_type}" = "kind" ]; then
 		manifest_cluster_type="minikube"
 	fi
-	CRC_MANIFEST_FILE_OLD="${CRC_DIR}/${manifest_cluster_type}/kruize_${manifest_cluster_type}.yaml"
+
+	local apply_manifest="${CRC_MANIFEST_FILE}"
+	local tmp_manifest=""
 
 	echo "use yaml build - $use_yaml_build"
 	if [ ${use_yaml_build} -eq 0 ]; then
-		cp ${CRC_MANIFEST_FILE} ${CRC_MANIFEST_FILE_OLD}
-		awk -v image_name=${AUTOTUNE_DOCKER_IMAGE} -v ui_image_name=${KRUIZE_UI_DOCKER_IMAGE} '{
-				if ($2=="name:") {
-					prev=$3;
-					print
-				} else if ($1=="image:" && prev=="kruize") {
-					$2=image_name;
-					printf"          %s %s\n", $1, $2;
-				} else if ($1=="image:" && prev=="kruize-ui-nginx-container") {
-					$2=ui_image_name;
-					printf"          %s %s\n", $1, $2;
-				} else { print }
-			 }' ${CRC_MANIFEST_FILE_OLD} >${CRC_MANIFEST_FILE}
+		tmp_manifest="$(mktemp)"
+		_kruize_crc_apply_images "${CRC_MANIFEST_FILE}" "${tmp_manifest}"
+		apply_manifest="${tmp_manifest}"
 	fi
 
-	${kubectl_cmd} apply -f ${CRC_MANIFEST_FILE}
+	# Instance mode: apply without -n so Namespace and cluster-scoped objects in the file are used as written
+	if [ -n "${KRUIZE_INSTANCE_ID:-}" ]; then
+		kubectl apply -f "${apply_manifest}"
+	else
+		${kubectl_cmd} apply -f "${apply_manifest}"
+	fi
 	check_running kruize ${autotune_ns} kruize-ui kruize-db
 	if [ "${err}" != "0" ]; then
+		[ -n "${tmp_manifest}" ] && rm -f "${tmp_manifest}"
 		# Indicate deploy failed on error
 		exit 1
 	fi
 
-	if [ ${use_yaml_build} -eq 0 ]; then
-		cp ${CRC_MANIFEST_FILE_OLD} ${CRC_MANIFEST_FILE}
-		rm ${CRC_MANIFEST_FILE_OLD}
-	fi
+	[ -n "${tmp_manifest}" ] && rm -f "${tmp_manifest}"
 }
 
 deploy_crc_common() {
 	# Default namespace handling
 	if [ -z "$autotune_ns" ]; then
-		case "$cluster_type" in
-			openshift)
-				autotune_ns="openshift-tuning"
-				;;
-			*)
-				autotune_ns="monitoring"
-				;;
-		esac
+		if [ -n "${KRUIZE_INSTANCE_ID:-}" ]; then
+			autotune_ns="${KRUIZE_INSTANCE_ID}"
+		else
+			case "$cluster_type" in
+				openshift)
+					autotune_ns="openshift-tuning"
+					;;
+				*)
+					autotune_ns="monitoring"
+					;;
+			esac
+		fi
 	fi
 
-	kubectl create namespace "${autotune_ns}" 2>/dev/null || true
+	# Hard guard: instance mode must never target the shared install
+	if [ -n "${KRUIZE_INSTANCE_ID:-}" ]; then
+		if [ "${autotune_ns}" = "openshift-tuning" ] || [ "${KRUIZE_INSTANCE_ID}" = "openshift-tuning" ]; then
+			echo "ERROR: Refusing CRC instance deploy that targets openshift-tuning"
+			exit 1
+		fi
+		if [ "${cluster_type}" != "openshift" ]; then
+			echo "ERROR: --instance CRC deploy is only supported for openshift"
+			exit 1
+		fi
+		local gen_script="${SCRIPTS_DIR}/generate_crc_instance_manifest.sh"
+		local out_dir="${KRUIZE_INSTANCE_MANIFEST_DIR:-/tmp/kruize-instance-manifests}"
+		mkdir -p "${out_dir}"
+		if [ -n "${KRUIZE_CRC_INSTANCE_MANIFEST:-}" ] && [ -f "${KRUIZE_CRC_INSTANCE_MANIFEST}" ]; then
+			CRC_MANIFEST_FILE="${KRUIZE_CRC_INSTANCE_MANIFEST}"
+			echo "Using pre-generated instance manifest: ${CRC_MANIFEST_FILE}"
+		else
+			CRC_MANIFEST_FILE="${out_dir}/kruize-crc-${KRUIZE_INSTANCE_ID}.yaml"
+			"${gen_script}" --instance "${KRUIZE_INSTANCE_ID}" --namespace "${autotune_ns}" \
+				--base "${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}" --out "${CRC_MANIFEST_FILE}"
+			export KRUIZE_CRC_INSTANCE_MANIFEST="${CRC_MANIFEST_FILE}"
+		fi
+	else
+		# Manifest selection by cluster type (stock path)
+		case "$cluster_type" in
+			openshift)
+				CRC_MANIFEST_FILE="${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}"
+				;;
+			*)
+				CRC_MANIFEST_FILE="${KRUIZE_CRC_DEPLOY_MANIFEST_MINIKUBE}"
+				;;
+		esac
+		kubectl create namespace "${autotune_ns}" 2>/dev/null || true
+	fi
 
 	# cluster-specific prometheus checks:
 	case "$cluster_type" in
@@ -164,16 +214,6 @@ deploy_crc_common() {
 			;;
 	esac
 
-	# Manifest selection by cluster type
-	case "$cluster_type" in
-		openshift)
-			CRC_MANIFEST_FILE="${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}"
-			;;
-		*)
-			CRC_MANIFEST_FILE="${KRUIZE_CRC_DEPLOY_MANIFEST_MINIKUBE}"
-			;;
-	esac
-
 	kruize_crc_start
 }
 
@@ -181,14 +221,36 @@ deploy_crc_common() {
 terminate_crc_common() {
 	CRC_MANIFEST_FILE=$1
 	if [ -z "$autotune_ns" ]; then
-		case "$cluster_type" in
-			openshift)
-				autotune_ns="${AUTOTUNE_OPENSHIFT_NAMESPACE}"
-				;;
-			*)
-				autotune_ns="monitoring"
-				;;
-		esac
+		if [ -n "${KRUIZE_INSTANCE_ID:-}" ]; then
+			autotune_ns="${KRUIZE_INSTANCE_ID}"
+		else
+			case "$cluster_type" in
+				openshift)
+					autotune_ns="${AUTOTUNE_OPENSHIFT_NAMESPACE}"
+					;;
+				*)
+					autotune_ns="monitoring"
+					;;
+			esac
+		fi
+	fi
+
+	if [ -n "${KRUIZE_INSTANCE_ID:-}" ]; then
+		if [ "${autotune_ns}" = "openshift-tuning" ] || [ "${KRUIZE_INSTANCE_ID}" = "openshift-tuning" ]; then
+			echo "ERROR: Refusing CRC instance terminate that targets openshift-tuning"
+			exit 1
+		fi
+		local gen_script="${SCRIPTS_DIR}/generate_crc_instance_manifest.sh"
+		local out_dir="${KRUIZE_INSTANCE_MANIFEST_DIR:-/tmp/kruize-instance-manifests}"
+		mkdir -p "${out_dir}"
+		local instance_manifest="${KRUIZE_CRC_INSTANCE_MANIFEST:-${out_dir}/kruize-crc-${KRUIZE_INSTANCE_ID}.yaml}"
+		if [ ! -f "${instance_manifest}" ]; then
+			"${gen_script}" --instance "${KRUIZE_INSTANCE_ID}" --namespace "${autotune_ns}" \
+				--base "${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}" --out "${instance_manifest}"
+		fi
+		echo "Deleting instance manifest objects from ${instance_manifest}"
+		kubectl delete -f "${instance_manifest}" 2>/dev/null || true
+		return
 	fi
 
 	kubectl_cmd="kubectl -n ${autotune_ns}"

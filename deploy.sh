@@ -97,9 +97,12 @@ function ctrlc_handler() {
 # Handle SIGHUP(1), SIGINT(2), SIGQUIT(3) for cleaning up containers in docker case
 trap "ctrlc_handler" 1 2 3
 
+# Instance id for isolated CRC installs (OpenShift). Empty = stock path (openshift-tuning).
+KRUIZE_INSTANCE_ID=""
+
 function usage() {
 	echo
-	echo "Usage: $0 [-a] [-k url] [-c [docker|minikube|openshift|aks|kind]] [-i autotune docker image] [-o hpo docker image] [-n namespace] [-d configmaps-dir ] [--timeout=x, x in seconds, for docker only]"
+	echo "Usage: $0 [-a] [-k url] [-c [docker|minikube|openshift|aks|kind]] [-i autotune docker image] [-o hpo docker image] [-n namespace] [-d configmaps-dir ] [--timeout=x, x in seconds, for docker only] [--instance=<id>]"
 	echo "       -s = start(default), -t = terminate"
 	echo " -s: Deploy autotune [Default]"
 	echo " -t: Terminate autotune deployment"
@@ -110,6 +113,8 @@ function usage() {
 	echo " -d: Config maps directory [Default - manifests/configmaps]"
 	echo " -m: Target mode selection [autotune | crc]"
 	echo " -b: Test with the kruize docker image in the deployment yaml"
+	echo " --instance=<id>: CRC multi-instance mode (OpenShift). Namespace defaults to <id> unless -n is set."
+	echo "                  Refuses openshift-tuning. Generates unique CR/CRB/PV names suffixed with -<id>."
 	exit -1
 }
 
@@ -135,6 +140,13 @@ while getopts ac:d:i:k:m:n:o:p:u:stb-: gopts; do
 			if [ -z "${timeout}" ]; then
 				usage
 			fi
+			;;
+		instance=*)
+			KRUIZE_INSTANCE_ID="${OPTARG#*=}"
+			if [ -z "${KRUIZE_INSTANCE_ID}" ]; then
+				usage
+			fi
+			export KRUIZE_INSTANCE_ID
 			;;
 		*)
 			if [ "${OPTERR}" == 1 ] && [ "${OPTSPEC:0:1}" != ":" ]; then
