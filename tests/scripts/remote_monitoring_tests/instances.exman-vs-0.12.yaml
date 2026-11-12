@@ -1,0 +1,9 @@
+# Compare exman:fix-bulk against stock autotune_operator:0.12
+# namespace omitted → equals id. Never targets openshift-tuning.
+
+instances:
+  - id: rm-exman-fix-bulk
+    image: "quay.io/bharathappali/exman:fix-bulk"
+
+  - id: rm-0-12
+    image: "0.12"

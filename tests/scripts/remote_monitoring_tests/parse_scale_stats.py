@@ -96,6 +96,15 @@ def parse_scale_dir(
     return stats
 
 
+def _infra_seconds(s: Dict[str, Any]) -> Any:
+    """Accept scale (`infra_setup_seconds`) or functional (`infra_setup_and_suite_seconds`)."""
+    if "infra_setup_seconds" in s and s["infra_setup_seconds"] is not None:
+        return s["infra_setup_seconds"]
+    if "infra_setup_and_suite_seconds" in s and s["infra_setup_and_suite_seconds"] is not None:
+        return s["infra_setup_and_suite_seconds"]
+    return ""
+
+
 def write_comparison(stats_list: List[Dict[str, Any]], out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_path = out_dir / "comparison.csv"
@@ -116,12 +125,14 @@ def write_comparison(stats_list: List[Dict[str, Any]], out_dir: Path) -> None:
 
     def row_values(s: Dict[str, Any]) -> List[str]:
         sc = s.get("scale_client") or {}
+        # Scale: closed-loop client totals. Functional: no scale phases — leave blank.
+        time_elapsed = sc.get("time_elapsed_seconds", s.get("suite_total_seconds", ""))
         return [
             str(s.get("id", "")),
             str(s.get("namespace", "")),
             str(s.get("image", "")),
-            str(s.get("infra_setup_seconds", "")),
-            str(sc.get("time_elapsed_seconds", s.get("suite_total_seconds", ""))),
+            str(_infra_seconds(s)),
+            str(time_elapsed if time_elapsed != "" else ""),
             str(sc.get("createExp_elapsed_seconds", "")),
             str(sc.get("bulkDataPost_elapsed_seconds", "")),
             str(sc.get("updateRec_elapsed_seconds", "")),
@@ -137,9 +148,13 @@ def write_comparison(stats_list: List[Dict[str, Any]], out_dir: Path) -> None:
     lines = [
         "# Multi-instance comparison",
         "",
-        "Scale fields are parsed from existing `rosSimulationScalabilityTest` logs "
-        "(same methodology as standalone scale_test). `load_model: closed_loop` — "
-        "not open-loop latency percentiles.",
+        "For **scale**: phase timings are parsed from existing "
+        "`rosSimulationScalabilityTest` logs (closed-loop; not open-loop latency). "
+        "`infra_setup_seconds` is deploy+suite wall clock.",
+        "",
+        "For **functional**: `infra_setup_seconds` is deploy+`test_autotune` wall clock "
+        "(`infra_setup_and_suite_seconds` in `kruize_stats.json`). Scale phase columns "
+        "are blank.",
         "",
         "| " + " | ".join(headers) + " |",
         "| " + " | ".join(["---"] * len(headers)) + " |",

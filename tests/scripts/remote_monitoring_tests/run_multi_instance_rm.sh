@@ -7,7 +7,11 @@
 # Usage:
 #   ./run_multi_instance_rm.sh [-f instances.yaml] [--suite functional|scale] \
 #       [--testcase test_e2e] [-c openshift] [-r resultsdir] [--build-push] \
-#       [--cleanup] [-- <scale-args...>]
+#       [--no-cleanup] [-- <scale-args...>]
+#
+# Default lifecycle: deploy → run → record metrics → cleanup instance stacks
+# (kubectl delete only, same as stock CRC). Never touches openshift-tuning
+# or /mnt/data. Pass --no-cleanup to leave instances up for debugging.
 #
 set -euo pipefail
 
@@ -24,7 +28,7 @@ CLUSTER_TYPE="openshift"
 RESULTS_DIR=""
 RESULTS_DIR_SET=0
 BUILD_PUSH=0
-CLEANUP=0
+CLEANUP=1
 DEFAULT_IMAGE_REPO="quay.io/kruize/autotune_operator"
 EXTRA_SCALE_ARGS=()
 
@@ -78,11 +82,13 @@ write_run_status() {
 }
 
 usage() {
-	echo "Usage: $0 [-f instances.yaml] [--suite functional|scale] [--testcase <marker>] [-c openshift] [-r resultsdir] [--build-push] [--cleanup] [-- <scale-args>]"
+	echo "Usage: $0 [-f instances.yaml] [--suite functional|scale] [--testcase <marker>] [-c openshift] [-r resultsdir] [--build-push] [--no-cleanup] [-- <scale-args>]"
 	echo "  -f omitted → ${DEFAULT_INSTANCES_FILE}"
 	echo "  -r omitted → atomically create ./rm-multi-<N> (mkdir claim; safe for concurrent runs)"
 	echo "  Preflight: aborts if any target namespace already exists (change the YAML)."
-	echo "  Never deploys to or deletes openshift-tuning."
+	echo "  Cleanup (default): kubectl delete instance NS/objects (stock CRC style)."
+	echo "  --no-cleanup: leave instance stacks for debugging."
+	echo "  Never deploys to or deletes openshift-tuning / /mnt/data."
 	exit 1
 }
 
@@ -114,7 +120,12 @@ while [[ $# -gt 0 ]]; do
 			shift
 			;;
 		--cleanup)
+			# Default is already cleanup; keep flag as an explicit no-op for old callers.
 			CLEANUP=1
+			shift
+			;;
+		--no-cleanup)
+			CLEANUP=0
 			shift
 			;;
 		-h|--help)
@@ -157,6 +168,9 @@ else
 	mkdir -p "${RESULTS_DIR}"
 	write_run_status "${RESULTS_DIR}" "in_progress" "explicit_-r"
 fi
+
+# Absolute path so pushd into tests/ or scale_test/ does not break log redirects
+RESULTS_DIR="$(cd "${RESULTS_DIR}" && pwd)"
 
 echo "Results directory: ${RESULTS_DIR} (state=in_progress)"
 ORCH_LOG="${RESULTS_DIR}/orchestrator.log"
@@ -283,7 +297,8 @@ run_one() {
 
 	if [[ "${SUITE}" == "functional" ]]; then
 		pushd "${REPO_ROOT}/tests" >/dev/null
-		./test_autotune.sh -c "${CLUSTER_TYPE}" -i "${img}" -n "${ns}" --instance="${iid}" \
+		# Force bash (macOS /bin/sh is bash 3.2 and breaks declare -A / typeset -n in suite scripts)
+		bash ./test_autotune.sh -c "${CLUSTER_TYPE}" -i "${img}" -n "${ns}" --instance="${iid}" \
 			--testsuite=remote_monitoring_tests --testcase="${TESTCASE}" \
 			--resultsdir="${out_dir}" >>"${run_log}" 2>&1 || rc=$?
 		popd >/dev/null
@@ -298,7 +313,9 @@ stats = {
   "image": "${img}",
   "suite": "functional",
   "testcase": "${TESTCASE}",
+  # Wall clock for deploy + suite; also as infra_setup_seconds for comparison.csv
   "infra_setup_and_suite_seconds": ${infra_secs},
+  "infra_setup_seconds": ${infra_secs},
   "metric_kind": "fixed_work_wall_clock",
   "source": "test_autotune_functional",
   "exit_code": ${rc},
@@ -382,11 +399,11 @@ else
 fi
 
 if [[ "${CLEANUP}" -eq 1 ]]; then
-	echo "Cleaning up instance stacks only..." | tee -a "${ORCH_LOG}"
+	echo "Cleaning up instance stacks (kubectl delete only; never /mnt/data)..." | tee -a "${ORCH_LOG}"
 	while IFS= read -r row; do
 		iid="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["id"])' "${row}")"
 		ns="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["namespace"])' "${row}")"
-		if [[ "${ns}" == "openshift-tuning" ]]; then
+		if [[ "${ns}" == "openshift-tuning" || "${iid}" == "openshift-tuning" ]]; then
 			echo "Refusing cleanup of openshift-tuning" | tee -a "${ORCH_LOG}"
 			continue
 		fi
@@ -394,6 +411,8 @@ if [[ "${CLEANUP}" -eq 1 ]]; then
 		./deploy.sh -c openshift -m crc -n "${ns}" --instance="${iid}" -t >>"${ORCH_LOG}" 2>&1 || true
 		popd >/dev/null
 	done < <(iter_rows)
+else
+	echo "Skipping cleanup (--no-cleanup); instance stacks left in place" | tee -a "${ORCH_LOG}"
 fi
 
 if [[ "${FAIL}" -ne 0 ]]; then

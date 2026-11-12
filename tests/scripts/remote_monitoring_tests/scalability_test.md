@@ -100,7 +100,9 @@ cd <KRUIZE_REPO>/tests/scripts/remote_monitoring_tests
 ./run_multi_instance_rm.sh -c openshift --suite functional --testcase test_e2e
 ```
 
-Artifacts: `<results>/<id>/kruize_stats.json` (scale timings **parsed** from existing client logs), `<results>/comparison.csv`, `<results>/comparison.md`. Optional `--cleanup` removes only instance namespaces/objects — never `openshift-tuning`.
+Artifacts: `<results>/<id>/kruize_stats.json` (scale timings **parsed** from existing client logs), `<results>/comparison.csv`, `<results>/comparison.md`.
+
+Default cleanup (omit `--no-cleanup`) removes instance namespaces/objects via `kubectl delete` only (same as stock CRC). Instance DB state is container-local `PGDATA` and goes away with the pod. Unique `/mnt/data-kruize-<id>` PVs isolate from `openshift-tuning`’s `/mnt/data` — never touched.
 
 **Note:** Scale client timings are closed-loop batch metrics (same as historical scale_test). They are not open-loop / coordinated-omission-corrected latency percentiles.
 

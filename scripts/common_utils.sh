@@ -129,7 +129,8 @@ kruize_crc_start() {
 		apply_manifest="${tmp_manifest}"
 	fi
 
-	# Instance mode: apply without -n so Namespace and cluster-scoped objects in the file are used as written
+	# Instance mode: apply without -n so Namespace and cluster-scoped objects in the file are used as written.
+	# No node hostPath prepare/chmod/SELinux — stock CRC behavior as-is.
 	if [ -n "${KRUIZE_INSTANCE_ID:-}" ]; then
 		kubectl apply -f "${apply_manifest}"
 	else
@@ -249,7 +250,12 @@ terminate_crc_common() {
 				--base "${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}" --out "${instance_manifest}"
 		fi
 		echo "Deleting instance manifest objects from ${instance_manifest}"
-		kubectl delete -f "${instance_manifest}" 2>/dev/null || true
+		# Same as stock CRC: kubectl delete only. DB state lives in container
+		# PGDATA and goes away with the pod. Never touch /mnt/data or node disks.
+		# --wait=false avoids multi-minute hangs on already-deleting objects.
+		kubectl delete -f "${instance_manifest}" --wait=false --ignore-not-found=true 2>/dev/null || true
+		kubectl delete "namespace/${autotune_ns}" --wait=false --ignore-not-found=true 2>/dev/null || true
+		kubectl wait --for=delete "namespace/${autotune_ns}" --timeout=120s 2>/dev/null || true
 		return
 	fi
 

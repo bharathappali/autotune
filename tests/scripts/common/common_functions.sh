@@ -613,6 +613,60 @@ function form_curl_cmd() {
 	echo "curl_cmd = ${curl_cmd}"
 }
 
+# Wait until the Kruize URL answers from the app (not the OpenShift router interstitial).
+# Uses AUTOTUNE_URL set by form_curl_cmd. On openshift also waits for Route Admitted.
+function wait_for_kruize_route() {
+	local max_attempts="${1:-36}"
+	local sleep_secs="${2:-5}"
+	local attempt body code
+
+	if [ -z "${AUTOTUNE_URL:-}" ]; then
+		echo "ERROR: AUTOTUNE_URL is empty; call form_curl_cmd before wait_for_kruize_route"
+		return 1
+	fi
+
+	if [ "${cluster_type}" = "openshift" ]; then
+		resolve_kruize_namespace
+		echo "Waiting for Route/kruize Admitted in namespace ${NAMESPACE}..."
+		for attempt in $(seq 1 "${max_attempts}"); do
+			if oc get route kruize -n "${NAMESPACE}" \
+				-o jsonpath='{.status.ingress[0].conditions[?(@.type=="Admitted")].status}' 2>/dev/null \
+				| grep -qx "True"; then
+				echo "Route/kruize is Admitted"
+				break
+			fi
+			if [ "${attempt}" -eq "${max_attempts}" ]; then
+				echo "ERROR: Route/kruize not Admitted after ${max_attempts} attempts"
+				return 1
+			fi
+			sleep "${sleep_secs}"
+		done
+	fi
+
+	echo "Waiting for Kruize URL to be reachable at ${AUTOTUNE_URL} ..."
+	for attempt in $(seq 1 "${max_attempts}"); do
+		code=$(curl -s -o /tmp/kruize_route_probe.out -w '%{http_code}' \
+			-H 'Accept: application/json' --connect-timeout 5 --max-time 15 \
+			"${AUTOTUNE_URL}" || echo "000")
+		body=$(cat /tmp/kruize_route_probe.out 2>/dev/null || true)
+		# OpenShift router HTML when the route/backend is not ready yet
+		if echo "${body}" | grep -Eqi "The host doesn't exist|Application is not available|<html"; then
+			echo "  attempt ${attempt}/${max_attempts}: router interstitial or HTML (http ${code}); retrying..."
+			sleep "${sleep_secs}"
+			continue
+		fi
+		# Any non-HTML response (including empty/404 JSON from the app) means the route hit the service
+		if [ "${code}" != "000" ]; then
+			echo "Kruize URL is up (http ${code})"
+			return 0
+		fi
+		echo "  attempt ${attempt}/${max_attempts}: connect failed; retrying..."
+		sleep "${sleep_secs}"
+	done
+	echo "ERROR: Kruize URL not ready after ${max_attempts} attempts: ${AUTOTUNE_URL}"
+	return 1
+}
+
 # Compare the actual json and expected jsons
 # Input: Acutal json, expected json
 function compare_json() {
@@ -912,10 +966,16 @@ function create_performance_profile() {
         echo "Forming the curl command to create the performance profile ..."
         form_curl_cmd
 
+        if ! wait_for_kruize_route; then
+                echo "Failed! Kruize route/URL not ready; skipping createPerformanceProfile"
+                exit 1
+        fi
+
         curl_cmd="${curl_cmd}/createPerformanceProfile -d @${perf_profile_json}"
 
         echo "curl_cmd = ${curl_cmd}"
 
+        local status_json perf_profile_status
         status_json=$($curl_cmd)
         echo "create performance profile status = ${status_json}"
 
@@ -923,9 +983,9 @@ function create_performance_profile() {
         echo "Command used to create the performance profile = ${curl_cmd}"
         echo ""
 
-        perf_profile_status=$(echo ${status_json} | jq '.status')
-        echo "create performance profile status = ${perf_profile_status}"
-        if [ "${perf_profile_status}" != \"SUCCESS\" ]; then
+        perf_profile_status=$(echo "${status_json}" | jq -r '.status // empty' 2>/dev/null || true)
+        echo "create performance profile status = \"${perf_profile_status}\""
+        if [ "${perf_profile_status}" != "SUCCESS" ]; then
                 echo "Failed! Create performance profile failed. Status - ${perf_profile_status}"
                 exit 1
         fi
@@ -1035,12 +1095,15 @@ function kruize_remote_patch() {
 	KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT="${CRC_DIR}/openshift/kruize-crc-openshift.yaml"
 	KRUIZE_CRC_DEPLOY_MANIFEST_MINIKUBE="${CRC_DIR}/minikube/kruize-crc-minikube.yaml"
 
+	# Portable in-place sed: use -i.bak (macOS sed treats bare -i -E as extension="-E")
 	if [ ${cluster_type} == "minikube" ] || [ ${cluster_type} == "kind" ]; then
-		sed -i -E 's/"isROSEnabled": "false",?\s*//g; s/"local": "true",?\s*//g'  ${KRUIZE_CRC_DEPLOY_MANIFEST_MINIKUBE}    #this will remove the entry and use default set by java i.e. isROSEnabled=true and local=false
+		sed -i.bak -E 's/"isROSEnabled": "false",?[[:space:]]*//g; s/"local": "true",?[[:space:]]*//g'  ${KRUIZE_CRC_DEPLOY_MANIFEST_MINIKUBE}    #this will remove the entry and use default set by java i.e. isROSEnabled=true and local=false
+		rm -f ${KRUIZE_CRC_DEPLOY_MANIFEST_MINIKUBE}.bak
 	elif [ ${cluster_type} == "openshift" ]; then
-		sed -i -E 's/"isROSEnabled": "false",?\s*//g; s/"local": "true",?\s*//g'  ${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}
-		sed -i 's/\([[:space:]]*\)\(storage:\)[[:space:]]*[0-9]\+Mi/\1\2 1Gi/' ${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}
-		sed -i 's/\([[:space:]]*\)\(memory:\)[[:space:]]*".*"/\1\2 "2Gi"/; s/\([[:space:]]*\)\(cpu:\)[[:space:]]*".*"/\1\2 "2"/' ${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}
+		sed -i.bak -E 's/"isROSEnabled": "false",?[[:space:]]*//g; s/"local": "true",?[[:space:]]*//g'  ${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}
+		sed -i.bak 's/\([[:space:]]*\)\(storage:\)[[:space:]]*[0-9]\+Mi/\1\2 1Gi/' ${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}
+		sed -i.bak 's/\([[:space:]]*\)\(memory:\)[[:space:]]*".*"/\1\2 "2Gi"/; s/\([[:space:]]*\)\(cpu:\)[[:space:]]*".*"/\1\2 "2"/' ${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}
+		rm -f ${KRUIZE_CRC_DEPLOY_MANIFEST_OPENSHIFT}.bak
 	fi
 }
 
