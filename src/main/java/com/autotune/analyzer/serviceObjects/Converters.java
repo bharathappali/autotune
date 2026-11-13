@@ -189,7 +189,10 @@ public class Converters {
                                                             boolean checkForTimestamp, boolean getLatest, Timestamp monitoringEndTime) {
             NamespaceData clonedNamespaceData = null;
             if(k8sObject.getNamespaceDataMap() != null && k8sObject.getNamespace() != null && k8sObject.getNamespaceDataMap().containsKey(k8sObject.getNamespace())) {
-                clonedNamespaceData = Utils.getClone(k8sObject.getNamespaceDataMap().get(k8sObject.getNamespace()), NamespaceData.class);
+                NamespaceData namespaceSource = k8sObject.getNamespaceDataMap().get(k8sObject.getNamespace());
+                clonedNamespaceData = (checkForTimestamp || getLatest)
+                        ? Utils.getClone(namespaceSource, NamespaceData.class)
+                        : namespaceSource;
             }
             if (clonedNamespaceData != null && clonedNamespaceData.getNamespaceRecommendations() != null
             && clonedNamespaceData.getNamespaceRecommendations().getData() != null) {
@@ -214,7 +217,9 @@ public class Converters {
             List<ContainerAPIObject> containerAPIObjects = new ArrayList<>();
 
             for (ContainerData containerData : k8sObject.getContainerDataMap().values()) {
-                ContainerData clonedContainerData = Utils.getClone(containerData, ContainerData.class);
+                ContainerData clonedContainerData = (checkForTimestamp || getLatest)
+                        ? Utils.getClone(containerData, ContainerData.class)
+                        : containerData;
 
                 if (clonedContainerData != null) {
                     HashMap<Timestamp, MappedRecommendationForTimestamp> recommendations = clonedContainerData.getContainerRecommendations().getData();

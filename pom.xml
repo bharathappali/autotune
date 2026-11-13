@@ -25,6 +25,8 @@
         <micrometer-version>1.17.0</micrometer-version>
         <awssdk-version>2.54.18</awssdk-version>
         <jackson-version>2.22.3</jackson-version>
+        <vertx-version>4.5.36</vertx-version>
+        <netty-version>4.1.140.Final</netty-version>
         <evalex-version>3.6.2</evalex-version>
         <mockito-version>5.23.0</mockito-version>
         <kafka-version>4.2.0</kafka-version>
@@ -43,6 +45,44 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-blackbird</artifactId>
+            <version>${jackson-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-core</artifactId>
+            <version>${vertx-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-web</artifactId>
+            <version>${vertx-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-pg-client</artifactId>
+            <version>${vertx-version}</version>
+        </dependency>
+        <!-- vertx-pg-client marks SCRAM optional; OpenShift Postgres requires it -->
+        <dependency>
+            <groupId>com.ongres.scram</groupId>
+            <artifactId>scram-client</artifactId>
+            <version>3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-epoll</artifactId>
+            <version>${netty-version}</version>
+            <classifier>linux-x86_64</classifier>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-epoll</artifactId>
+            <version>${netty-version}</version>
+            <classifier>linux-aarch_64</classifier>
         </dependency>
 
         <dependency>
@@ -225,6 +265,7 @@
                 <version>${appassembler-maven-plugin-version}</version>
                 <configuration>
                     <assembleDirectory>target</assembleDirectory>
+                    <extraJvmArguments>--enable-native-access=ALL-UNNAMED</extraJvmArguments>
                     <programs>
                         <program>
                             <mainClass>com.autotune.Autotune</mainClass>

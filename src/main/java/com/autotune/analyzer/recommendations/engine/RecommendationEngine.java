@@ -280,6 +280,18 @@ public class RecommendationEngine implements RecommendationEngineService {
      * @return The KruizeObject containing the prepared recommendations.
      */
     public KruizeObject prepareRecommendations(int calCount, String target_cluster, String bulkJobID) throws FetchMetricsError {
+        return prepareInternal(calCount, target_cluster, bulkJobID, false);
+    }
+
+    /**
+     * Terms, models and the existing processors. Results are already on the object.
+     * Persistence is left to the caller so the connection is not held during the math.
+     */
+    public KruizeObject preparePreloaded(int calCount) throws FetchMetricsError {
+        return prepareInternal(calCount, AnalyzerConstants.REMOTE, null, true);
+    }
+
+    private KruizeObject prepareInternal(int calCount, String target_cluster, String bulkJobID, boolean preloaded) throws FetchMetricsError {
         Map<String, KruizeObject> mainKruizeExperimentMAP = new ConcurrentHashMap<>();
         Map<String, Terms> terms = new HashMap<>();
         ValidationOutputData validationOutputData;
@@ -289,7 +301,7 @@ public class RecommendationEngine implements RecommendationEngineService {
                     intervalEndTimeStr);
             setInterval_end_time(interval_end_time);
         }
-        KruizeObject kruizeObject = createKruizeObject(target_cluster);
+        KruizeObject kruizeObject = preloaded ? getKruizeObject() : createKruizeObject(target_cluster);
         if (null != bulkJobID) kruizeObject.setBulkJobId(bulkJobID);
         if (!kruizeObject.getValidation_data().isSuccess())
             return kruizeObject;
@@ -378,23 +390,29 @@ public class RecommendationEngine implements RecommendationEngineService {
                 interval_start_time = Timestamp.valueOf(Objects.requireNonNull(getInterval_end_time()).toLocalDateTime().minusDays(maxDay));
             }
             // update the KruizeObject to have the results data from the available datasource
-            try {
-                String errorMsg = getResults(mainKruizeExperimentMAP, kruizeObject, experimentName, interval_start_time, dataSource);
-                if (!errorMsg.isEmpty()) {
-                    throw new Exception(errorMsg);
+            if (!preloaded) {
+                try {
+                    String errorMsg = getResults(mainKruizeExperimentMAP, kruizeObject, experimentName, interval_start_time, dataSource);
+                    if (!errorMsg.isEmpty()) {
+                        throw new Exception(errorMsg);
+                    }
+                } catch (FetchMetricsError e) {
+                    throw new FetchMetricsError(e.getMessage());
+                } catch (Exception e) {
+                    LOGGER.error(String.format(AnalyzerErrorConstants.APIErrors.UpdateRecommendationsAPI.UPDATE_RECOMMENDATIONS_FAILED_COUNT, calCount));
+                    kruizeObject = new KruizeObject();
+                    kruizeObject.setValidation_data(new ValidationOutputData(false, e.getMessage(), HttpServletResponse.SC_BAD_REQUEST));
+                    return kruizeObject;
                 }
-            } catch (FetchMetricsError e) {
-                throw new FetchMetricsError(e.getMessage());
-            } catch (Exception e) {
-                LOGGER.error(String.format(AnalyzerErrorConstants.APIErrors.UpdateRecommendationsAPI.UPDATE_RECOMMENDATIONS_FAILED_COUNT, calCount));
-                kruizeObject = new KruizeObject();
-                kruizeObject.setValidation_data(new ValidationOutputData(false, e.getMessage(), HttpServletResponse.SC_BAD_REQUEST));
-                return kruizeObject;
             }
 
             // generate recommendation
             try {
                 generateRecommendations(kruizeObject);
+                if (preloaded) {
+                    kruizeObject.setValidation_data(new ValidationOutputData(true, null, null));
+                    return kruizeObject;
+                }
                 // store the recommendations in the DB
                 validationOutputData = addRecommendationsToDB(mainKruizeExperimentMAP, kruizeObject);
                 if (!validationOutputData.isSuccess()) {

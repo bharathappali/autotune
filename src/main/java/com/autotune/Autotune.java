@@ -33,6 +33,7 @@ import com.autotune.common.exceptions.datasource.UnsupportedDataSourceProvider;
 import com.autotune.database.helper.DBConstants;
 import com.autotune.database.init.KruizeHibernateUtil;
 import com.autotune.experimentManager.core.ExperimentManager;
+import com.autotune.http.KruizeVertxServer;
 import com.autotune.operator.InitializeDeployment;
 import com.autotune.operator.KruizeDeploymentInfo;
 import com.autotune.service.HealthService;
@@ -46,7 +47,6 @@ import io.prometheus.metrics.instrumentation.jvm.JvmMetrics;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
 import org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.eclipse.jetty.server.handler.CrossOriginHandler;
@@ -94,11 +94,6 @@ public class Autotune {
         QueuedThreadPool threadPool = new QueuedThreadPool();
         threadPool.setMaxThreads(ServerContext.KRUIZE_HTTP_THREAD_POOL_COUNT); // Set the maximum number of threads in the pool
         Server server = new Server(threadPool);
-        // Create a connector (e.g., HTTP)
-        ServerConnector connector = new ServerConnector(server);
-        connector.setPort(ServerContext.KRUIZE_SERVER_PORT);
-        // Set the connector to the server
-        server.addConnector(connector);
 
         context = new ServletContextHandler();
         context.setContextPath(ServerContext.ROOT_CONTEXT);
@@ -215,6 +210,7 @@ public class Autotune {
             String startAutotune = System.getenv("START_AUTOTUNE");
             if (startAutotune == null || startAutotune.equalsIgnoreCase("true")) {
                 server.start();
+                KruizeVertxServer.start(context);
                 server.join();
             }
         } catch (Exception e) {

@@ -409,7 +409,7 @@ public class RecommendationsResource extends HttpServlet {
      * 2. Moving requests/limits into the resources map for config and variation
      * 3. Nullifying old fields
      */
-    private void processRecommendations(Collection<MappedRecommendationForTimestamp> recommendations) {
+    public static void processRecommendations(Collection<MappedRecommendationForTimestamp> recommendations) {
 
         if (recommendations != null) {
             for (MappedRecommendationForTimestamp recommendation : recommendations) {
@@ -439,7 +439,7 @@ public class RecommendationsResource extends HttpServlet {
         }
     }
 
-    private void restructureConfigObj(Config config) {
+    private static void restructureConfigObj(Config config) {
         if (config != null) {
             Map<AnalyzerConstants.ResourceSetting, Map<AnalyzerConstants.RecommendationItem, RecommendationConfigItem>>
                     resources = new EnumMap<>(AnalyzerConstants.ResourceSetting.class);
