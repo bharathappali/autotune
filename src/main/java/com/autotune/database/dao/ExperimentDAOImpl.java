@@ -22,6 +22,7 @@ import com.autotune.analyzer.utils.AnalyzerConstants;
 import com.autotune.analyzer.utils.AnalyzerErrorConstants;
 import com.autotune.common.data.ValidationOutputData;
 import com.autotune.database.helper.DBConstants;
+import com.autotune.database.helper.RecommendationResultRow;
 import com.autotune.database.init.KruizeHibernateUtil;
 import com.autotune.database.table.*;
 import com.autotune.database.table.lm.*;
@@ -30,6 +31,7 @@ import com.autotune.utils.MetricsConfig;
 import io.micrometer.core.instrument.Timer;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceException;
+import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
@@ -39,6 +41,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletResponse;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
@@ -1683,6 +1687,50 @@ public class ExperimentDAOImpl implements ExperimentDAO {
             }
         }
         return kruizeResultsEntries;
+    }
+
+    @Override
+    public List<RecommendationResultRow> loadRecommendationResultRows(String experimentName, String cluster_name, Timestamp interval_start_time, Timestamp interval_end_time) throws Exception {
+        if (interval_start_time == null || interval_end_time == null) {
+            return Collections.emptyList();
+        }
+        String sql = DBConstants.SQLQUERY.SELECT_RECOMMENDATION_RESULT_ROWS;
+        if (cluster_name != null) {
+            sql = sql + DBConstants.SQLQUERY.SELECT_RECOMMENDATION_RESULT_ROWS_AND_CLUSTER_NAME;
+        } else {
+            sql = sql + DBConstants.SQLQUERY.SELECT_RECOMMENDATION_RESULT_ROWS_AND_CLUSTER_NAME_IS_NULL;
+        }
+        final String query = sql;
+        try (Session session = KruizeHibernateUtil.getSessionFactory().openSession()) {
+            session.setDefaultReadOnly(true);
+            session.setHibernateFlushMode(FlushMode.MANUAL);
+            return session.doReturningWork(connection -> {
+                Calendar utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                List<RecommendationResultRow> rows = new ArrayList<>();
+                try (PreparedStatement statement = connection.prepareStatement(query)) {
+                    statement.setString(1, experimentName);
+                    statement.setTimestamp(2, interval_start_time, utc);
+                    statement.setTimestamp(3, interval_end_time, utc);
+                    if (cluster_name != null) {
+                        statement.setString(4, cluster_name);
+                    }
+                    try (ResultSet resultSet = statement.executeQuery()) {
+                        while (resultSet.next()) {
+                            rows.add(new RecommendationResultRow(
+                                    resultSet.getString("experiment_name"),
+                                    resultSet.getTimestamp("interval_start_time", utc),
+                                    resultSet.getTimestamp("interval_end_time", utc),
+                                    resultSet.getString("version"),
+                                    resultSet.getString("extended_data")));
+                        }
+                    }
+                }
+                return rows;
+            });
+        } catch (Exception e) {
+            LOGGER.error("Not able to load results due to: {}", e.getMessage());
+            throw new Exception("Error while loading results from the database due to : " + e.getMessage());
+        }
     }
 
     @Override
